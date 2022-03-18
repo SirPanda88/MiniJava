@@ -1,0 +1,8 @@
+// PA1 parse refs pass
+class Test {
+
+    void p() {
+        p ();
+    }
+}
+
