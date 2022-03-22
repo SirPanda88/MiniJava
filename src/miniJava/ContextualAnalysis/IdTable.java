@@ -4,23 +4,28 @@ import miniJava.AbstractSyntaxTrees.Declaration;
 import miniJava.ErrorReporter;
 
 import java.util.HashMap;
-import java.util.Stack;
 
 public class IdTable {
 
     private ErrorReporter reporter;
-    public Stack<HashMap<String, Declaration>> scopedIdTable;
+    public ModifiedStack scopedIdTable;
+    public HashMap<String, Declaration> currentScope;
 
     public IdTable(ErrorReporter reporter) {
         this.reporter = reporter;
+        scopedIdTable = new ModifiedStack();
     }
 
     public void openScope() {
-        return;
+        currentScope = new HashMap<String, Declaration>();
     }
 
     public void enter(Declaration decl) {
-        return;
+        if (currentScope.containsKey(decl.name)) {
+            throw new IllegalArgumentException();
+        }
+
+        currentScope.put(decl.name, decl);
     }
 
     public void closeScope() {
