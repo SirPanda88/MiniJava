@@ -29,6 +29,6 @@ public class IdTable {
     }
 
     public void closeScope() {
-        return;
+        scopedIdTable.clearUntilTop(0);
     }
 }
