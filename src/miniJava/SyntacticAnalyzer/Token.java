@@ -55,6 +55,7 @@ public class Token {
         MINUS,
         MULT,
         DIV,
-        ERROR;
+        ERROR,
+        NULL;
     }
 }

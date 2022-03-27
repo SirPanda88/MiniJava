@@ -51,6 +51,7 @@ public class ModifiedStack {
     }
 
     // returns the index of a hashmap containing desired string searching from top to bottom
+    // returns -1 if desired string is not found
     public int search (String s) {
         for (int i = topOfStack - 1; i >=0; i++) {
             if (stack.get(i).containsKey(s)) {

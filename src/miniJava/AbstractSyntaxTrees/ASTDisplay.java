@@ -306,7 +306,7 @@ public class ASTDisplay implements Visitor<String,Object> {
         expr.sizeExpr.visit(this, indent(arg));
         return null;
     }
-    
+
     public Object visitNewObjectExpr(NewObjectExpr expr, String arg){
         show(arg, expr);
         expr.classtype.visit(this, indent(arg));
@@ -362,6 +362,12 @@ public class ASTDisplay implements Visitor<String,Object> {
     
     public Object visitBooleanLiteral(BooleanLiteral bool, String arg){
         show(arg, quote(bool.spelling) + " " + bool.toString());
+        return null;
+    }
+    // NULL
+    @Override
+    public Object visitNullLiteral(NullLiteral nullLiteral, String arg) {
+        show(arg, quote(nullLiteral.spelling) + " " + nullLiteral.toString());
         return null;
     }
 }

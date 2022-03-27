@@ -526,6 +526,10 @@ public class Parser {
         Token literalToken;
         Expression expr;
         switch (token.kind) {
+            case NULL:
+                literalToken = token;
+                accept(token.kind);
+                return new LiteralExpr(new NullLiteral(literalToken), null);
             case NUM:
                 literalToken = token;
                 accept(token.kind);

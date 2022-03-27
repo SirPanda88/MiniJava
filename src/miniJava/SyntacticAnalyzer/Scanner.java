@@ -206,6 +206,8 @@ public class Scanner {
                             return Token.TokenKind.FALSE;
                         case "new":
                             return Token.TokenKind.NEW;
+                        case "null":
+                            return Token.TokenKind.NULL;
                         default:
                             return Token.TokenKind.ID;
                     }

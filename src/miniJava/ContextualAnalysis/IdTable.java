@@ -8,27 +8,28 @@ import java.util.HashMap;
 public class IdTable {
 
     private ErrorReporter reporter;
-    public ModifiedStack scopedIdTable;
+    public ModifiedStack stack;
     public HashMap<String, Declaration> currentScope;
 
     public IdTable(ErrorReporter reporter) {
         this.reporter = reporter;
-        scopedIdTable = new ModifiedStack();
+        stack = new ModifiedStack();
     }
 
     public void openScope() {
         currentScope = new HashMap<String, Declaration>();
+        stack.push(currentScope);
     }
 
     public void enter(Declaration decl) {
         if (currentScope.containsKey(decl.name)) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("Name already declared in current scope");
         }
 
         currentScope.put(decl.name, decl);
     }
 
     public void closeScope() {
-        scopedIdTable.clearUntilTop(0);
+        stack.pop();
     }
 }
