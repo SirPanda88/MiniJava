@@ -34,6 +34,7 @@ public class Parser {
 
     // Program ::= (ClassDeclaration)* eot
     private Package parseProgram() throws SyntaxError {
+//        int packageLineNum = scanner.getLineNumber();
         ClassDeclList cdl = new ClassDeclList();
         while (token.kind != Token.TokenKind.EOT) {
             ClassDecl cd = parseClassDeclaration();
@@ -45,6 +46,8 @@ public class Parser {
 
     // ClassDeclaration ::= class id { ( FieldDeclaration | MethodDeclaration )* }
     private ClassDecl parseClassDeclaration() throws SyntaxError {
+//        int classLineNum = scanner.getLineNumber();
+
         accept(Token.TokenKind.CLASS);
 
         // create classname variable to hold name info
@@ -66,11 +69,14 @@ public class Parser {
             String memberName;
             ParameterDeclList pdl = new ParameterDeclList();
             StatementList stl = new StatementList();
+            int memberNameLineNum;
 
             if (token.kind == Token.TokenKind.VOID) {
+//                int typeLineNum = scanner.getLineNumber();
                 typeDenoter = new BaseType(TypeKind.VOID, null);
                 accept(token.kind);
                 memberName = token.spelling;
+//                memberNameLineNum = scanner.getLineNumber();
                 accept(Token.TokenKind.ID);
                 accept(Token.TokenKind.OPENPAREN);
                 if (token.kind != Token.TokenKind.CLOSEPAREN) {
@@ -254,7 +260,7 @@ public class Parser {
         Reference reference = null;
         ExprList exprList = new ExprList();
         BaseRef baseRef = null;
-        QualRef qualRef= null;
+        QualRef qualRef = null;
         switch (token.kind) {
             case RETURN:
                 accept(token.kind);

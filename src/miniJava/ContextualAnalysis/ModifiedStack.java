@@ -6,43 +6,43 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ModifiedStack {
-    private ArrayList<HashMap<String, Declaration>> stack;
-    private int topOfStack;
+    public ArrayList<HashMap<String, Declaration>> arrList;
+    public int topOfStack;
 
     public ModifiedStack () {
-        stack = new ArrayList<HashMap<String, Declaration>>();
+        arrList = new ArrayList<HashMap<String, Declaration>>();
         topOfStack = 0;
     }
 
     public boolean isEmpty() {
-        return stack.size() == 0;
+        return arrList.size() == 0;
     }
 
     public HashMap<String, Declaration> peek() {
-        return stack.get(topOfStack);
+        return arrList.get(topOfStack);
     }
 
     public HashMap<String, Declaration> pop() {
-        HashMap<String, Declaration> result = stack.get(topOfStack-1);
-        stack.remove(topOfStack-1);
+        HashMap<String, Declaration> result = arrList.get(topOfStack-1);
+        arrList.remove(topOfStack-1);
         topOfStack--;
         return result;
     }
 
     public void push(HashMap<String, Declaration> map) {
-        stack.add(topOfStack, map);
+        arrList.add(topOfStack, map);
         topOfStack++;
     }
 
     // clears all entries on the stack from index inclusive to the top of the stack
     public void clearUntilTop(int index) {
         if (topOfStack > index) {
-            stack.subList(index, topOfStack).clear();
+            arrList.subList(index, topOfStack).clear();
         }
     }
 
     public boolean contains(String s) {
-        for (HashMap<String, Declaration> map : stack) {
+        for (HashMap<String, Declaration> map : arrList) {
             if (map.containsKey(s)) {
                 return true;
             }
@@ -50,14 +50,14 @@ public class ModifiedStack {
         return false;
     }
 
-    // returns the index of a hashmap containing desired string searching from top to bottom
-    // returns -1 if desired string is not found
-    public int search (String s) {
-        for (int i = topOfStack - 1; i >=0; i++) {
-            if (stack.get(i).containsKey(s)) {
-                return i;
+    // returns the declaration in a hashmap containing desired string searching from top to bottom
+    // returns null if desired string is not found
+    public Declaration search (String s) {
+        for (int i = topOfStack - 1; i >=0; i--) {
+            if (arrList.get(i).containsKey(s)) {
+                return arrList.get(i).get(s);
             }
         }
-        return -1;
+        return null;
     }
 }

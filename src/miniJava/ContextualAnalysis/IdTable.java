@@ -23,13 +23,23 @@ public class IdTable {
 
     public void enter(Declaration decl) {
         if (currentScope.containsKey(decl.name)) {
-            throw new IllegalArgumentException("Name already declared in current scope");
+            throw new IllegalArgumentException("Duplicate declaration (name already declared in current scope)");
         }
-
+        if (stack.topOfStack > 4) {
+            for (int i = 2; i < stack.arrList.size(); i++) {
+                if (stack.arrList.get(i).containsKey(decl.name)) {
+                    throw new IllegalArgumentException("Declarations at level 4 or higher may not hide declarations at levels 3 or higher");
+                }
+            }
+        }
         currentScope.put(decl.name, decl);
     }
 
     public void closeScope() {
         stack.pop();
+    }
+
+    public Declaration search(String s) {
+        return stack.search(s);
     }
 }

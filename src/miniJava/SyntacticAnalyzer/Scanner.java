@@ -11,10 +11,12 @@ public class Scanner {
     private char currentChar;
     private StringBuilder currentSpelling;
     private boolean eot = false;
+    private int lineNumber;
 
     public Scanner(InputStream inputStream, ErrorReporter reporter) {
         this.inputStream = inputStream;
         this.reporter = reporter;
+        lineNumber = 1;
         // initialize scanner state
         readChar();
     }
@@ -23,6 +25,9 @@ public class Scanner {
     public Token scan() {
         // skip whitespace and comments
         while (!eot && (isWhiteSpace(currentChar) || currentChar == '/')) {
+            if (currentChar == '\n') {
+                lineNumber++;
+            }
             if (isWhiteSpace(currentChar)) {
                 skipIt();
                 continue;
@@ -48,6 +53,9 @@ public class Scanner {
                 // skip //
             } else if (!eot && currentChar == '/') {
                 while (!eot && (currentChar != '\n' && currentChar != '\r')) {
+                    if (currentChar == '\n') {
+                        lineNumber++;
+                    }
                     skipIt();
                 }
                 if (eot) {
@@ -257,5 +265,9 @@ public class Scanner {
 
     private void scanError(String message) {
         reporter.reportError("Scan Error:  " + message);
+    }
+
+    public int getLineNumber() {
+        return lineNumber;
     }
 }

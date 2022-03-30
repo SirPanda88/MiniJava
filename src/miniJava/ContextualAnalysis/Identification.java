@@ -4,16 +4,36 @@ import miniJava.AbstractSyntaxTrees.*;
 import miniJava.AbstractSyntaxTrees.Package;
 import miniJava.ErrorReporter;
 
+import java.util.Map;
+
 public class Identification implements Visitor<Object, Object> {
 
     public IdTable table;
     private ErrorReporter reporter;
+    private ClassDecl currentClass;
+    private Map<String, Declaration> initializedClasses;
 
     public Identification(Package ast, ErrorReporter reporter) {
         this.reporter = reporter;
         table = new IdTable(reporter);
         ast.visit(this, null);
     }
+
+    // identificationError is used to trace error when identification fails
+    static class IdentificationError extends Error {
+        private static final long serialVersionUID = 1L;
+    }
+
+    private void idError(String e) throws Identification.IdentificationError {
+        reporter.reportError("Identification error: " + e);
+        throw new IdentificationError();
+    }
+
+    // TODO: put visitPackage inside of try catch finally block
+    // catch illegal argument exception thrown by idTable to find duplicate declarations
+    // have each method throw IdentificationError
+
+
 
     // Package
 
@@ -40,7 +60,10 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitClassDecl(ClassDecl cd, Object arg) {
+        // set current class so this keyword works
         currentClass = cd;
+        // add it to the map of initialized class names to decls to support static/ non static references
+        initializedClasses.put(cd.name, cd);
 
         // add members so all fields and methods are visible
         table.openScope();
@@ -71,6 +94,7 @@ public class Identification implements Visitor<Object, Object> {
     @Override
     public Object visitMethodDecl(MethodDecl md, Object arg) {
         md.type.visit(this, null);
+
         table.openScope();
         for (ParameterDecl pd : md.parameterDeclList) {
             pd.visit(this, null);
@@ -86,17 +110,19 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitParameterDecl(ParameterDecl pd, Object arg) {
+        pd.type.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitVarDecl(VarDecl decl, Object arg) {
+        table.enter(decl);
+        decl.type.visit(this, null);
         return null;
     }
 
 
-
-
+    // Types
 
     @Override
     public Object visitBaseType(BaseType type, Object arg) {
@@ -105,111 +131,192 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitClassType(ClassType type, Object arg) {
+        type.className.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitArrayType(ArrayType type, Object arg) {
+        type.eltType.visit(this, null);
         return null;
     }
 
+
+    // Statements
+
     @Override
     public Object visitBlockStmt(BlockStmt stmt, Object arg) {
+        table.openScope();
+        for (Statement individualStmt : stmt.sl) {
+            individualStmt.visit(this, null);
+        }
+        table.closeScope();
         return null;
     }
 
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
+        stmt.initExp.visit(this, null);
+        stmt.varDecl.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
+        stmt.ref.visit(this, null);
+        stmt.val.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitIxAssignStmt(IxAssignStmt stmt, Object arg) {
+        stmt.ref.visit(this, null);
+        stmt.ix.visit(this, null);
+        stmt.exp.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitCallStmt(CallStmt stmt, Object arg) {
+        stmt.methodRef.visit(this, null);
+        for (Expression expr : stmt.argList) {
+            expr.visit(this, null);
+        }
         return null;
     }
 
     @Override
     public Object visitReturnStmt(ReturnStmt stmt, Object arg) {
+        if (stmt.returnExpr != null)
+            stmt.returnExpr.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitIfStmt(IfStmt stmt, Object arg) {
+        stmt.cond.visit(this, null);
+        table.openScope();
+        if (stmt.thenStmt instanceof VarDeclStmt) {
+            idError("solitary variable declaration in THEN branch of if statement");
+        }
+        stmt.thenStmt.visit(this, null);
+        table.closeScope();
+        if (stmt.elseStmt != null) {
+            table.openScope();
+            if (stmt.elseStmt instanceof VarDeclStmt) {
+                idError("solitary variable declaration in ELSE branch of if statement");
+            }
+            stmt.elseStmt.visit(this, null);
+            table.closeScope();
+        }
         return null;
     }
 
     @Override
     public Object visitWhileStmt(WhileStmt stmt, Object arg) {
+        stmt.cond.visit(this, null);
+        table.openScope();
+        stmt.body.visit(this, null);
+        table.closeScope();
         return null;
     }
 
+
+    // Expressions
+
     @Override
     public Object visitUnaryExpr(UnaryExpr expr, Object arg) {
+        expr.operator.visit(this, null);
+        expr.expr.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitBinaryExpr(BinaryExpr expr, Object arg) {
+        expr.operator.visit(this, null);
+        expr.left.visit(this, null);
+        expr.right.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitRefExpr(RefExpr expr, Object arg) {
+        expr.ref.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitIxExpr(IxExpr expr, Object arg) {
+        expr.ref.visit(this, null);
+        expr.ixExpr.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitCallExpr(CallExpr expr, Object arg) {
+        expr.functionRef.visit(this, null);
+        for (Expression e: expr.argList) {
+            e.visit(this, null);
+        }
         return null;
     }
 
     @Override
     public Object visitLiteralExpr(LiteralExpr expr, Object arg) {
+        expr.lit.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitNewObjectExpr(NewObjectExpr expr, Object arg) {
+        expr.classtype.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitNewArrayExpr(NewArrayExpr expr, Object arg) {
+        expr.eltType.visit(this, null);
+        expr.sizeExpr.visit(this, null);
         return null;
     }
+
+
+    // References
 
     @Override
     public Object visitThisRef(ThisRef ref, Object arg) {
+        ref.decl = currentClass;
         return null;
     }
 
+
+
+
+    // fix idref and qref
     @Override
     public Object visitIdRef(IdRef ref, Object arg) {
+        ref.id.visit(this, null);
         return null;
     }
 
     @Override
     public Object visitQRef(QualRef ref, Object arg) {
+        ref.ref.visit(this, null);
+        ref.id.visit(this, ref.ref);
         return null;
     }
 
+
+    // Terminals
+
     @Override
     public Object visitIdentifier(Identifier id, Object arg) {
+        Declaration originalDecl = table.search(id.spelling);
+        if (originalDecl == null) {
+            idError("Undeclared identifier");
+            return null;
+        }
+        id.decl = originalDecl;
         return null;
     }
 
