@@ -158,7 +158,7 @@ public class TypeChecking implements Visitor<Object, Object> {
         expr.operator.visit(this, null);
         expr.left.visit(this, null);
         expr.right.visit(this, null);
-        if (!expr.left.typeAttribute.comparable(expr.right.typeAttribute)) {
+        if (!expr.left.typeAttribute.sameType(expr.right.typeAttribute)) {
             typeError("Unequal types on either side of binary expression");
         }
         switch (expr.operator.kind) {

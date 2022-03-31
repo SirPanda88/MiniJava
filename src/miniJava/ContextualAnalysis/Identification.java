@@ -133,14 +133,14 @@ public class Identification implements Visitor<Object, Object> {
     @Override
     public Object visitClassType(ClassType type, Object arg) {
         Identifier classTypeName = type.className;
-        Declaration originalDecl = table.search(classTypeName.spelling);
+        Declaration originalDecl = table.searchClasses(classTypeName.spelling);
         if (originalDecl == null) {
             idError("Undeclared identifier after 'new' (not a class) in new object expr");
             return null;
         }
-        if (table.scopeLevel(classTypeName.spelling) > 0) {
-            idError("New called on non class identifier in new object expr");
-        }
+//        if (table.scopeLevel(classTypeName.spelling) > 0) {
+//            idError("New called on non class identifier in new object expr");
+//        }
         classTypeName.decl = originalDecl;
         return null;
     }
@@ -282,14 +282,14 @@ public class Identification implements Visitor<Object, Object> {
     @Override
     public Object visitNewObjectExpr(NewObjectExpr expr, Object arg) {
         Identifier newClassName = expr.classtype.className;
-        Declaration originalDecl = table.search(newClassName.spelling);
+        Declaration originalDecl = table.searchClasses(newClassName.spelling);
         if (originalDecl == null) {
             idError("Undeclared identifier after 'new' (not a class) in new object expr");
             return null;
         }
-        if (table.scopeLevel(newClassName.spelling) > 0) {
-            idError("New called on non class identifier in new object expr");
-        }
+//        if (table.scopeLevel(newClassName.spelling) > 0) {
+//            idError("New called on non class identifier in new object expr");
+//        }
         newClassName.decl = originalDecl;
         return null;
     }
@@ -299,14 +299,14 @@ public class Identification implements Visitor<Object, Object> {
         TypeKind arrType = expr.eltType.typeKind;
         if (arrType == TypeKind.CLASS) {
             Identifier arrTypeName = ((ClassType)(expr.eltType)).className;
-            Declaration originalDecl = table.search(arrTypeName.spelling);
+            Declaration originalDecl = table.searchClasses(arrTypeName.spelling);
             if (originalDecl == null) {
                 idError("Undeclared identifier after 'new' (not a class) in new array expr");
                 return null;
             }
-            if (table.scopeLevel(arrTypeName.spelling) > 0) {
-                idError("New called on non class identifier in new array expr");
-            }
+//            if (table.scopeLevel(arrTypeName.spelling) > 0) {
+//                idError("New called on non class identifier in new array expr");
+//            }
             arrTypeName.decl = originalDecl;
         }
         expr.sizeExpr.visit(this, null);
@@ -322,10 +322,7 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
-
-
-
-    // fix idref and qref
+    // TODO: fix idref and qref
     @Override
     public Object visitIdRef(IdRef ref, Object arg) {
         ref.id.visit(this, null);
