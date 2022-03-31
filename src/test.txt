@@ -1,8 +1,12 @@
-// PA1 parse refs pass
+
 class Test {
 
-    void p() {
-        p ();
+    void p(Test2 t) {
+        Test2[] test2Arr = new Test2[];
     }
+}
+
+class Test2 {
+    int x;
 }
 

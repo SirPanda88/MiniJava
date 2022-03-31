@@ -111,6 +111,7 @@ public class Identification implements Visitor<Object, Object> {
     @Override
     public Object visitParameterDecl(ParameterDecl pd, Object arg) {
         pd.type.visit(this, null);
+        table.enter(pd);
         return null;
     }
 
@@ -131,7 +132,16 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitClassType(ClassType type, Object arg) {
-        type.className.visit(this, null);
+        Identifier classTypeName = type.className;
+        Declaration originalDecl = table.search(classTypeName.spelling);
+        if (originalDecl == null) {
+            idError("Undeclared identifier after 'new' (not a class) in new object expr");
+            return null;
+        }
+        if (table.scopeLevel(classTypeName.spelling) > 0) {
+            idError("New called on non class identifier in new object expr");
+        }
+        classTypeName.decl = originalDecl;
         return null;
     }
 
@@ -269,13 +279,34 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitNewObjectExpr(NewObjectExpr expr, Object arg) {
-        expr.classtype.visit(this, null);
+        Identifier newClassName = expr.classtype.className;
+        Declaration originalDecl = table.search(newClassName.spelling);
+        if (originalDecl == null) {
+            idError("Undeclared identifier after 'new' (not a class) in new object expr");
+            return null;
+        }
+        if (table.scopeLevel(newClassName.spelling) > 0) {
+            idError("New called on non class identifier in new object expr");
+        }
+        newClassName.decl = originalDecl;
         return null;
     }
 
     @Override
     public Object visitNewArrayExpr(NewArrayExpr expr, Object arg) {
-        expr.eltType.visit(this, null);
+        TypeKind arrType = expr.eltType.typeKind;
+        if (arrType == TypeKind.CLASS) {
+            Identifier arrTypeName = ((ClassType)(expr.eltType)).className;
+            Declaration originalDecl = table.search(arrTypeName.spelling);
+            if (originalDecl == null) {
+                idError("Undeclared identifier after 'new' (not a class) in new array expr");
+                return null;
+            }
+            if (table.scopeLevel(arrTypeName.spelling) > 0) {
+                idError("New called on non class identifier in new array expr");
+            }
+            arrTypeName.decl = originalDecl;
+        }
         expr.sizeExpr.visit(this, null);
         return null;
     }

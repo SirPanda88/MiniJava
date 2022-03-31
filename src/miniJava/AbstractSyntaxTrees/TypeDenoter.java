@@ -19,11 +19,16 @@ abstract public class TypeDenoter extends AST {
     public boolean sameType(TypeDenoter other) {
         if (typeKind == TypeKind.CLASS) {
             if (other.typeKind == TypeKind.CLASS) {
-                if (((ClassType)this).className == ((ClassType)other).className) {
-                    return true;
-                }
+                return ((ClassType) this).className == ((ClassType) other).className;
             }
             return false;
+        }
+        return typeKind == other.typeKind;
+    }
+
+    public boolean comparable(TypeDenoter other) {
+        if (this.typeKind == TypeKind.CLASS || this.typeKind == TypeKind.NULL) {
+            return other.typeKind == TypeKind.CLASS || other.typeKind == TypeKind.NULL;
         }
         return typeKind == other.typeKind;
     }

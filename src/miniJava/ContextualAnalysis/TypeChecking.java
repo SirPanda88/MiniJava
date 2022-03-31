@@ -123,6 +123,11 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitWhileStmt(WhileStmt stmt, Object arg) {
+        stmt.cond.visit(this, null);
+        if (stmt.cond.typeAttribute.typeKind != TypeKind.BOOLEAN) {
+            typeError("Condition expression is not of type boolean in while statement");
+        }
+        stmt.body.visit(this, null);
         return null;
     }
 
@@ -134,14 +139,14 @@ public class TypeChecking implements Visitor<Object, Object> {
         expr.expr.visit(this, null);
         if (expr.operator.kind == Token.TokenKind.NOT) {
             // logical negation can only be applied to booleans
-            expr.typeDenoter = new BaseType(TypeKind.BOOLEAN, null);
-            if (expr.expr.typeDenoter.typeKind != TypeKind.BOOLEAN) {
+            expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
+            if (expr.expr.typeAttribute.typeKind != TypeKind.BOOLEAN) {
                 typeError("'!' (NOT) applied to non boolean expression");
             }
         } else if (expr.operator.kind == Token.TokenKind.MINUS) {
             // arithmetic negation can only be applied to integers
-            expr.typeDenoter = new BaseType(TypeKind.INT, null);
-            if (expr.expr.typeDenoter.typeKind != TypeKind.INT) {
+            expr.typeAttribute = new BaseType(TypeKind.INT, null);
+            if (expr.expr.typeAttribute.typeKind != TypeKind.INT) {
                 typeError("'-' (MINUS) applied to non integer expression");
             }
         }
@@ -153,7 +158,7 @@ public class TypeChecking implements Visitor<Object, Object> {
         expr.operator.visit(this, null);
         expr.left.visit(this, null);
         expr.right.visit(this, null);
-        if (!expr.left.typeDenoter.sameType(expr.right.typeDenoter)) {
+        if (!expr.left.typeAttribute.comparable(expr.right.typeAttribute)) {
             typeError("Unequal types on either side of binary expression");
         }
         switch (expr.operator.kind) {
@@ -164,8 +169,8 @@ public class TypeChecking implements Visitor<Object, Object> {
             case LESS:
             case LESSEQUAL:
             case GREATEREQUAL:
-                expr.typeDenoter = new BaseType(TypeKind.BOOLEAN, null);
-                if (expr.left.typeDenoter.typeKind != TypeKind.INT) {
+                expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
+                if (expr.left.typeAttribute.typeKind != TypeKind.INT) {
                     typeError("Non integer used with relational integer operator");
                 }
                 break;
@@ -174,8 +179,8 @@ public class TypeChecking implements Visitor<Object, Object> {
             case MINUS:
             case MULT:
             case DIV:
-                expr.typeDenoter = new BaseType(TypeKind.INT, null);
-                if (expr.left.typeDenoter.typeKind != TypeKind.INT) {
+                expr.typeAttribute = new BaseType(TypeKind.INT, null);
+                if (expr.left.typeAttribute.typeKind != TypeKind.INT) {
                     typeError("Non integer used with arithmetic integer operator");
                 }
                 break;
@@ -183,8 +188,8 @@ public class TypeChecking implements Visitor<Object, Object> {
                 // strictly logical operators return a boolean and only operate on booleans
             case AND:
             case OR:
-                expr.typeDenoter = new BaseType(TypeKind.BOOLEAN, null);
-                if (expr.left.typeDenoter.typeKind != TypeKind.BOOLEAN) {
+                expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
+                if (expr.left.typeAttribute.typeKind != TypeKind.BOOLEAN) {
                     typeError("Non boolean used with logical integer operator");
                 }
                 break;
@@ -200,15 +205,15 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitRefExpr(RefExpr expr, Object arg) {
-        expr.typeDenoter = expr.ref.decl.type;
+        expr.typeAttribute = expr.ref.decl.type;
         return null;
     }
 
     @Override
     public Object visitIxExpr(IxExpr expr, Object arg) {
-        expr.typeDenoter = ((ArrayType)(expr.ref.decl.type)).eltType;
+        expr.typeAttribute = ((ArrayType)(expr.ref.decl.type)).eltType;
         expr.ixExpr.visit(this, null);
-        if (expr.ixExpr.typeDenoter.typeKind != TypeKind.INT) {
+        if (expr.ixExpr.typeAttribute.typeKind != TypeKind.INT) {
             typeError("Size expression is not of type int in index array expression");
         }
         return null;
@@ -216,27 +221,33 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitCallExpr(CallExpr expr, Object arg) {
-        expr.typeDenoter = expr.functionRef.decl.type;
+        expr.typeAttribute = expr.functionRef.decl.type;
         if (((MethodDecl)(expr.functionRef.decl)).parameterDeclList.size() != expr.argList.size()) {
             typeError("Size of argument list does not match size of argument list of referenced method");
         }
-        for (Expression argumentExpr : expr.argList) {
 
+        // compare referenced method parameter types to passed in parameters
+        for (int i = 0; i < ((MethodDecl)(expr.functionRef.decl)).parameterDeclList.size(); i++) {
+            TypeDenoter paramType = ((MethodDecl)(expr.functionRef.decl)).parameterDeclList.get(i).type;
+            if (!paramType.sameType(expr.argList.get(i).typeAttribute)) {
+                typeError("CallExpr has different argument type than referenced method");
+            }
         }
+        return null;
     }
 
     @Override
     public Object visitLiteralExpr(LiteralExpr expr, Object arg) {
         switch (expr.lit.kind) {
             case NUM:
-                expr.typeDenoter = new BaseType(TypeKind.INT, null);
+                expr.typeAttribute = new BaseType(TypeKind.INT, null);
                 break;
             case TRUE:
             case FALSE:
-                expr.typeDenoter = new BaseType(TypeKind.BOOLEAN, null);
+                expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
                 break;
             case NULL:
-                expr.typeDenoter = new BaseType(TypeKind.NULL, null);
+                expr.typeAttribute = new BaseType(TypeKind.NULL, null);
                 break;
         }
         return null;
@@ -244,15 +255,15 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitNewObjectExpr(NewObjectExpr expr, Object arg) {
-        expr.typeDenoter = expr.classtype;
+        expr.typeAttribute = expr.classtype;
         return null;
     }
 
     @Override
     public Object visitNewArrayExpr(NewArrayExpr expr, Object arg) {
-        expr.typeDenoter = new ArrayType(expr.eltType, null);
+        expr.typeAttribute = new ArrayType(expr.eltType, null);
         expr.sizeExpr.visit(this, null);
-        if (expr.sizeExpr.typeDenoter.typeKind != TypeKind.INT) {
+        if (expr.sizeExpr.typeAttribute.typeKind != TypeKind.INT) {
             typeError("Size expression is not of type int in new array expression");
         }
         return null;

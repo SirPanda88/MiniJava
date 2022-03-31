@@ -60,4 +60,13 @@ public class ModifiedStack {
         }
         return null;
     }
+
+    public int scopeLevel (String s) {
+        for (int i = topOfStack - 1; i >=0; i--) {
+            if (arrList.get(i).containsKey(s)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 }
