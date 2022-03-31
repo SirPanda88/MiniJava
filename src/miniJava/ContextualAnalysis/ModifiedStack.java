@@ -69,4 +69,11 @@ public class ModifiedStack {
         }
         return -1;
     }
+
+    public Declaration searchClasses (String s) {
+            if (arrList.get(0).containsKey(s)) {
+                return arrList.get(0).get(s);
+            }
+        return null;
+    }
 }

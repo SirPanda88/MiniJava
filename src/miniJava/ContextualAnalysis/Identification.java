@@ -166,6 +166,8 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
+        // visit right hand expression first
+        // to prevent use of the declared variable in the initializing expression
         stmt.initExp.visit(this, null);
         stmt.varDecl.visit(this, null);
         return null;

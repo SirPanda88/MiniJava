@@ -46,4 +46,8 @@ public class IdTable {
     public int scopeLevel(String s) {
         return stack.scopeLevel(s);
     }
+
+    public Declaration searchClasses(String s) {
+        return stack.searchClasses(s);
+    }
 }

@@ -21,7 +21,7 @@ abstract public class TypeDenoter extends AST {
             if (other.typeKind == TypeKind.CLASS) {
                 return ((ClassType) this).className == ((ClassType) other).className;
             }
-            return false;
+            return other.typeKind == TypeKind.NULL;
         }
         return typeKind == other.typeKind;
     }
