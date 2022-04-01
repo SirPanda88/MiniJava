@@ -194,6 +194,9 @@ public class Identification implements Visitor<Object, Object> {
         for (Expression expr : stmt.argList) {
             expr.visit(this, null);
         }
+        if (!(stmt.methodRef.decl instanceof MethodDecl)) {
+            idError("Method call in statement must point to method declaration");
+        }
         return null;
     }
 
@@ -270,6 +273,9 @@ public class Identification implements Visitor<Object, Object> {
         for (Expression e: expr.argList) {
             e.visit(this, null);
         }
+        if (!(expr.functionRef.decl instanceof MethodDecl)) {
+            idError("Method call in expression must point to method declaration");
+        }
         return null;
     }
 
@@ -301,7 +307,7 @@ public class Identification implements Visitor<Object, Object> {
             Identifier arrTypeName = ((ClassType)(expr.eltType)).className;
             Declaration originalDecl = table.searchClasses(arrTypeName.spelling);
             if (originalDecl == null) {
-                idError("Undeclared identifier after 'new' (not a class) in new array expr");
+                idError("Undeclared class identifier after 'new' in new array expr");
                 return null;
             }
 //            if (table.scopeLevel(arrTypeName.spelling) > 0) {
@@ -322,10 +328,16 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
-    // TODO: fix idref and qref
     @Override
     public Object visitIdRef(IdRef ref, Object arg) {
-        ref.id.visit(this, null);
+        // decorate ref.id
+        Declaration originalDecl = table.search(ref.id.spelling);
+        if (originalDecl == null) {
+            idError("Undeclared identifier");
+            return null;
+        }
+        ref.id.decl = originalDecl;
+        ref.decl = ref.id.decl;
         return null;
     }
 
@@ -333,12 +345,16 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitQRef(QualRef ref, Object arg) {
         ref.ref.visit(this, null);
         ref.id.visit(this, ref.ref);
+        ref.decl = ref.id.decl;
         return null;
     }
 
 
     // Terminals
 
+    // only time we visit identifier using visitor is when it is called by visitQRef
+    // we use the arg parameter of the visitor pattern to pass in the QRef reference
+    // decorate identifier of idRef with corresponding declaration
     @Override
     public Object visitIdentifier(Identifier id, Object arg) {
         Declaration originalDecl = table.search(id.spelling);
