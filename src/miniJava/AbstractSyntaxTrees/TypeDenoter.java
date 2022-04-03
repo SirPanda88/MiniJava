@@ -22,14 +22,14 @@ abstract public class TypeDenoter extends AST {
         }
         if (typeKind == TypeKind.CLASS) {
             if (other.typeKind == TypeKind.CLASS) {
-                return ((ClassType) this).className == ((ClassType) other).className;
+                return ((ClassType) this).className.spelling.equals(((ClassType) other).className.spelling);
             }
             return other.typeKind == TypeKind.NULL;
         }
         if (this.typeKind == TypeKind.ARRAY) {
             if (other.typeKind == TypeKind.ARRAY) {
                 if ( ( (ArrayType) (this) ).eltType.typeKind == TypeKind.CLASS) {
-                    return ( (ClassType) ((ArrayType) (this)).eltType ).className == ( (ClassType) ((ArrayType) (this)).eltType ).className;
+                    return ( (ClassType) ((ArrayType) (this)).eltType ).className.spelling.equals(( (ClassType) ((ArrayType) (other)).eltType ).className.spelling);
                 }
                 return ((ArrayType)(this)).eltType.typeKind == ((ArrayType)other).eltType.typeKind;
             }
