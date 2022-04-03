@@ -4,19 +4,18 @@ import miniJava.AbstractSyntaxTrees.*;
 import miniJava.AbstractSyntaxTrees.Package;
 import miniJava.ErrorReporter;
 
-import java.util.Map;
-
 public class Identification implements Visitor<Object, Object> {
 
     public IdTable table;
     private ErrorReporter reporter;
     private ClassDecl currentClass;
-    private Map<String, Declaration> initializedClasses;
+    private boolean withinStaticMethod;
 
     public Identification(Package ast, ErrorReporter reporter) {
         this.reporter = reporter;
         table = new IdTable(reporter);
         ast.visit(this, null);
+        withinStaticMethod = false;
     }
 
     // identificationError is used to trace error when identification fails
@@ -62,8 +61,6 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitClassDecl(ClassDecl cd, Object arg) {
         // set current class so this keyword works
         currentClass = cd;
-        // add it to the map of initialized class names to decls to support static/ non static references
-        initializedClasses.put(cd.name, cd);
 
         // add members so all fields and methods are visible
         table.openScope();
@@ -95,6 +92,9 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitMethodDecl(MethodDecl md, Object arg) {
         md.type.visit(this, null);
 
+        // let method body know the access modifier of the method by setting withinStaticMethod flag
+        withinStaticMethod = md.isStatic;
+
         table.openScope();
         for (ParameterDecl pd : md.parameterDeclList) {
             pd.visit(this, null);
@@ -117,8 +117,8 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitVarDecl(VarDecl decl, Object arg) {
-        table.enter(decl);
         decl.type.visit(this, null);
+        table.enter(decl);
         return null;
     }
 
@@ -336,6 +336,13 @@ public class Identification implements Visitor<Object, Object> {
             idError("Undeclared identifier");
             return null;
         }
+
+        // if declaration is a member decl check static access
+        if (originalDecl instanceof MemberDecl) {
+            if (withinStaticMethod && !( ( (MemberDecl) originalDecl).isStatic )) {
+                idError("Reference within static method cannot directly access a non-static member of current class");
+            }
+        }
         ref.id.decl = originalDecl;
         ref.decl = ref.id.decl;
         return null;
@@ -353,17 +360,68 @@ public class Identification implements Visitor<Object, Object> {
     // Terminals
 
     // only time we visit identifier using visitor is when it is called by visitQRef
-    // we use the arg parameter of the visitor pattern to pass in the QRef reference
+    // we use the arg parameter of the visitor pattern to pass in the left hand reference
     // decorate identifier of idRef with corresponding declaration
     @Override
     public Object visitIdentifier(Identifier id, Object arg) {
-        Declaration originalDecl = table.search(id.spelling);
-        if (originalDecl == null) {
-            idError("Undeclared identifier");
-            return null;
+        if (arg == null) {
+            idError("Should never reach a call to visitIdentifier with null arg");
         }
-        id.decl = originalDecl;
-        return null;
+
+        if (arg instanceof ThisRef) {
+            // QualRef calling visitIdentifier method looks like this.id
+            // check if identifier is a member of current class by checking currentClass declaration
+            for (FieldDecl fd : currentClass.fieldDeclList) {
+                if (id.spelling.equals(fd.name)) {
+                    if (withinStaticMethod && !fd.isStatic) {
+                        idError("Reference within static method cannot directly access a non-static member of current class");
+                    }
+                    id.decl = fd;
+                    return null;
+                }
+            }
+            for (MethodDecl md : currentClass.methodDeclList) {
+                if (id.spelling.equals(md.name)) {
+                    if (withinStaticMethod && !md.isStatic) {
+                        idError("Reference within static method cannot directly access a non-static member of current class");
+                    }
+                    id.decl = md;
+                    return null;
+                }
+            }
+            idError("Identifier not found in current class for this.ID QualRef");
+
+        } else if (arg instanceof IdRef) {
+            // QualRef calling visitIdentifier looks like id.id, with nothing else on the left
+            // first id has to be in one of the scopes of the id table because it is unqualified ref
+            // first id has already been decorated with its decl
+            // check that first id's type is a class by checking its decl
+            // check if identifier is a member of the class referenced by the first id's decl's type
+
+            IdRef idRef = (IdRef) arg;
+            String className;
+
+            if (idRef.decl instanceof VarDecl) {
+                VarDecl varDecl = (VarDecl) idRef.decl;
+                if (varDecl.type.typeKind != TypeKind.CLASS) {
+                    idError("Cannot use dot operator on reference which does not point to a class declaration");
+                }
+                className = ( (ClassType) varDecl.type ).className.spelling;
+
+            }
+
+        } else if (arg instanceof QualRef) {
+
+        }
+
+
+//        Declaration originalDecl = table.search(id.spelling);
+//        if (originalDecl == null) {
+//            idError("Undeclared identifier");
+//            return null;
+//        }
+//        id.decl = originalDecl;
+//        return null;
     }
 
     @Override
