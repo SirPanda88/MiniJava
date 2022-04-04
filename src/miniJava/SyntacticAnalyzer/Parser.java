@@ -73,7 +73,7 @@ public class Parser {
             StatementList stl = new StatementList();
 
             if (token.kind == Token.TokenKind.VOID) {
-                typeDenoter = new BaseType(TypeKind.VOID, token.sourcePosition);
+                typeDenoter = new BaseType(TypeKind.VOID, new SourcePosition(memberLineNum));
                 accept(token.kind);
                 memberName = token.spelling;
                 accept(Token.TokenKind.ID);
@@ -212,13 +212,13 @@ public class Parser {
 
     // Reference ::= id | this | Reference . id
     private Reference parseReference() throws SyntaxError {
-
+        int refLineNum = scanner.getLineNumber();
         QualRef qualRef;
         BaseRef baseRef = null;
         switch (token.kind) {
             case ID:
                 Identifier identifier = new Identifier(token);
-                baseRef = new IdRef(identifier, null);
+                baseRef = new IdRef(identifier, new SourcePosition(refLineNum));
                 accept(token.kind);
                 break;
             case THIS:
@@ -230,14 +230,14 @@ public class Parser {
         }
         if (token.kind == Token.TokenKind.DOT) {
             accept(Token.TokenKind.DOT);
-            qualRef = new QualRef(baseRef, new Identifier(token), null);
+            qualRef = new QualRef(baseRef, new Identifier(token), new SourcePosition(refLineNum));
             accept(Token.TokenKind.ID);
         } else {
             return baseRef;
         }
         while(token.kind == Token.TokenKind.DOT) {
             accept(Token.TokenKind.DOT);
-            qualRef = new QualRef(qualRef, new Identifier(token), null);
+            qualRef = new QualRef(qualRef, new Identifier(token), new SourcePosition(refLineNum));
             accept(Token.TokenKind.ID);
         }
         return qualRef;
@@ -254,6 +254,7 @@ public class Parser {
         | while ( Expression ) Statement
     */
     private Statement parseStatement() throws SyntaxError {
+        int stmtLineNum = scanner.getLineNumber();
         Expression expr = null;
         Expression expr1 = null;
         Statement stmt = null;
@@ -270,10 +271,10 @@ public class Parser {
                 if (token.kind != Token.TokenKind.SEMICOLON) {
                     expr = parseExpression();
                     accept(Token.TokenKind.SEMICOLON);
-                    return new ReturnStmt(expr, null);
+                    return new ReturnStmt(expr, new SourcePosition(stmtLineNum));
                 }
                 accept(Token.TokenKind.SEMICOLON);
-                return new ReturnStmt(null, null);
+                return new ReturnStmt(null, new SourcePosition(stmtLineNum));
             case IF:
                 accept(token.kind);
                 accept(Token.TokenKind.OPENPAREN);
@@ -283,16 +284,16 @@ public class Parser {
                 if (token.kind == Token.TokenKind.ELSE) {
                     accept(token.kind);
                     stmt1 = parseStatement();
-                    return new IfStmt(expr, stmt, stmt1, null);
+                    return new IfStmt(expr, stmt, stmt1, new SourcePosition(stmtLineNum));
                 }
-                return new IfStmt(expr, stmt, null);
+                return new IfStmt(expr, stmt, new SourcePosition(stmtLineNum));
             case WHILE:
                 accept(token.kind);
                 accept(Token.TokenKind.OPENPAREN);
                 expr = parseExpression();
                 accept(Token.TokenKind.CLOSEPAREN);
                 stmt = parseStatement();
-                return new WhileStmt(expr, stmt, null);
+                return new WhileStmt(expr, stmt, new SourcePosition(stmtLineNum));
             case OPENCURLY:
                 accept(token.kind);
                 StatementList stl = new StatementList();
@@ -300,7 +301,7 @@ public class Parser {
                     stl.add(parseStatement());
                 }
                 accept(Token.TokenKind.CLOSECURLY);
-                return new BlockStmt(stl, null);
+                return new BlockStmt(stl, new SourcePosition(stmtLineNum));
 
                 // we know the next nonterminal is Type
             case BOOLEAN:
@@ -311,7 +312,7 @@ public class Parser {
                 accept(Token.TokenKind.ASSIGNMENT);
                 expr = parseExpression();
                 accept(Token.TokenKind.SEMICOLON);
-                return new VarDeclStmt(new VarDecl(typeDenoter, idName, null), expr, null);
+                return new VarDeclStmt(new VarDecl(typeDenoter, idName, new SourcePosition(stmtLineNum)), expr, new SourcePosition(stmtLineNum));
 
                 // we know the next nonterminal is Reference
             case THIS:
@@ -321,7 +322,7 @@ public class Parser {
                         accept(token.kind);
                         expr = parseExpression();
                         accept(Token.TokenKind.SEMICOLON);
-                        return new AssignStmt(reference, expr, null);
+                        return new AssignStmt(reference, expr, new SourcePosition(stmtLineNum));
                     case OPENBRACKET:
                         accept(token.kind);
                         expr = parseExpression();
@@ -329,7 +330,7 @@ public class Parser {
                         accept(Token.TokenKind.ASSIGNMENT);
                         expr1 = parseExpression();
                         accept(Token.TokenKind.SEMICOLON);
-                        return new IxAssignStmt(reference, expr, expr1, null);
+                        return new IxAssignStmt(reference, expr, expr1, new SourcePosition(stmtLineNum));
                     case OPENPAREN:
                         accept(token.kind);
                         if (token.kind != Token.TokenKind.CLOSEPAREN) {
@@ -337,14 +338,14 @@ public class Parser {
                         }
                         accept(Token.TokenKind.CLOSEPAREN);
                         accept(Token.TokenKind.SEMICOLON);
-                        return new CallStmt(reference, exprList, null);
+                        return new CallStmt(reference, exprList, new SourcePosition(stmtLineNum));
                     default:
                         parseError("expected one of the following: " +
                                 "'=', '[', '(' after reference (this) within statement," +
                                 " but found '" + token.kind + "'");
                 }
             case ID: // check rest of code
-                typeDenoter = new ClassType(new Identifier(token), null);
+                typeDenoter = new ClassType(new Identifier(token), new SourcePosition(stmtLineNum));
                 idName = token.spelling;
                 accept(token.kind);
                 switch(token.kind) {
@@ -354,7 +355,7 @@ public class Parser {
                             // we know it is Type id = Expression ; where type = id[], we are moving through the brackets
                             // so we can use the logic in the below case id
                             accept(token.kind);
-                            typeDenoter = new ArrayType(typeDenoter, null);
+                            typeDenoter = new ArrayType(typeDenoter, new SourcePosition(stmtLineNum));
                         } else {
                             // we know it is Reference [ Expression ] = Expression ;
                             expr = parseExpression();
@@ -362,8 +363,8 @@ public class Parser {
                             accept(Token.TokenKind.ASSIGNMENT);
                             expr1 = parseExpression();
                             accept(Token.TokenKind.SEMICOLON);
-                            return new IxAssignStmt(new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName, null)), null),
-                                    expr, expr1, null);
+                            return new IxAssignStmt(new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName, new SourcePosition(stmtLineNum))), new SourcePosition(stmtLineNum)),
+                                    expr, expr1, new SourcePosition(stmtLineNum));
                         }
                     case ID:
                         // we know it is Type ID = Expression ;
@@ -372,31 +373,31 @@ public class Parser {
                         accept(Token.TokenKind.ASSIGNMENT);
                          expr = parseExpression();
                         accept(Token.TokenKind.SEMICOLON);
-                        return new VarDeclStmt(new VarDecl(typeDenoter, idName, null), expr, null);
+                        return new VarDeclStmt(new VarDecl(typeDenoter, idName, new SourcePosition(stmtLineNum)), expr, new SourcePosition(stmtLineNum));
                     case DOT:
                         // we know it is one of the three references
-                        Identifier identifier = new Identifier(new Token(Token.TokenKind.ID, idName, null));
-                        baseRef = new IdRef(identifier, null);
+                        Identifier identifier = new Identifier(new Token(Token.TokenKind.ID, idName, new SourcePosition(stmtLineNum)));
+                        baseRef = new IdRef(identifier, new SourcePosition(stmtLineNum));
                         accept(Token.TokenKind.DOT);
-                        qualRef = new QualRef(baseRef, new Identifier(token), null);
+                        qualRef = new QualRef(baseRef, new Identifier(token), new SourcePosition(stmtLineNum));
                         accept(Token.TokenKind.ID);
 
                         while(token.kind == Token.TokenKind.DOT) {
                             accept(Token.TokenKind.DOT);
-                            qualRef = new QualRef(qualRef, new Identifier(token), null);
+                            qualRef = new QualRef(qualRef, new Identifier(token), new SourcePosition(stmtLineNum));
                             accept(Token.TokenKind.ID);
                         }
                         reference = qualRef;
                     default:
                         if (qualRef == null) {
-                            reference = new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName, null)), null);
+                            reference = new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName, new SourcePosition(stmtLineNum))), new SourcePosition(stmtLineNum));
                         }
                         switch (token.kind) {
                             case ASSIGNMENT:
                                 accept(token.kind);
                                     expr = parseExpression();
                                 accept(Token.TokenKind.SEMICOLON);
-                                return new AssignStmt(reference, expr, null);
+                                return new AssignStmt(reference, expr, new SourcePosition(stmtLineNum));
                             case OPENBRACKET:
                                 accept(token.kind);
                                 expr = parseExpression();
@@ -404,7 +405,7 @@ public class Parser {
                                 accept(Token.TokenKind.ASSIGNMENT);
                                 expr1 = parseExpression();
                                 accept(Token.TokenKind.SEMICOLON);
-                                return new IxAssignStmt(reference, expr, expr1, null);
+                                return new IxAssignStmt(reference, expr, expr1, new SourcePosition(stmtLineNum));
                             case OPENPAREN:
                                 accept(token.kind);
                                 if (token.kind != Token.TokenKind.CLOSEPAREN) {
@@ -412,7 +413,7 @@ public class Parser {
                                 }
                                 accept(Token.TokenKind.CLOSEPAREN);
                                 accept(Token.TokenKind.SEMICOLON);
-                                return new CallStmt(reference, exprList, null);
+                                return new CallStmt(reference, exprList, new SourcePosition(stmtLineNum));
                             default:
                                 parseError("expected one of the following: " +
                                         "'=', '[', '(' after reference within statement," +
@@ -449,72 +450,86 @@ public class Parser {
      */
 
     private Expression parseExpression() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr = parseConjunctionExpr();
         while(token.kind == Token.TokenKind.OR) {
             Token oper = token;
             accept(Token.TokenKind.OR);
             Expression expr1 = parseConjunctionExpr();
-            expr = new BinaryExpr(new Operator(oper), expr, expr1, null);
+            expr = new BinaryExpr(new Operator(oper), expr, expr1, new SourcePosition(exprLineNum));
         }
         return expr;
     }
     private Expression parseConjunctionExpr() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr = parseEqualityExpr();
         while(token.kind == Token.TokenKind.AND) {
             Token oper = token;
             accept(token.kind);
             Expression expr1 = parseEqualityExpr();
-            expr = new BinaryExpr(new Operator(oper), expr, expr1, null);
+            expr = new BinaryExpr(new Operator(oper), expr, expr1, new SourcePosition(exprLineNum));
         }
         return expr;
     }
     private Expression parseEqualityExpr() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr = parseRelationalExpr();
         while(token.kind == Token.TokenKind.EQUALS || token.kind == Token.TokenKind.NOTEQUAL) {
             Token oper = token;
             accept(token.kind);
             Expression expr1 = parseRelationalExpr();
-            expr = new BinaryExpr(new Operator(oper), expr, expr1, null);
+            expr = new BinaryExpr(new Operator(oper), expr, expr1, new SourcePosition(exprLineNum));
         }
         return expr;
     }
     private Expression parseRelationalExpr() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr = parseAdditiveExpr();
         while(token.kind == Token.TokenKind.LESSEQUAL || token.kind == Token.TokenKind.LESS ||
                 token.kind == Token.TokenKind.GREATER || token.kind == Token.TokenKind.GREATEREQUAL) {
             Token oper = token;
             accept(token.kind);
             Expression expr1 = parseAdditiveExpr();
-            expr = new BinaryExpr(new Operator(oper), expr, expr1, null);
+            expr = new BinaryExpr(new Operator(oper), expr, expr1, new SourcePosition(exprLineNum));
         }
         return expr;
     }
     private Expression parseAdditiveExpr() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr = parseMultiplicativeExpr();
         while(token.kind == Token.TokenKind.PLUS || token.kind == Token.TokenKind.MINUS) {
             Token oper = token;
             accept(token.kind);
             Expression expr1 = parseMultiplicativeExpr();
-            expr = new BinaryExpr(new Operator(oper), expr, expr1, null);
+            expr = new BinaryExpr(new Operator(oper), expr, expr1, new SourcePosition(exprLineNum));
         }
         return expr;
     }
     private Expression parseMultiplicativeExpr() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr = parseUnaryExpr();
         while(token.kind == Token.TokenKind.MULT || token.kind == Token.TokenKind.DIV) {
             Token oper = token;
             accept(token.kind);
             Expression expr1 = parseUnaryExpr();
-            expr = new BinaryExpr(new Operator(oper), expr, expr1, null);
+            expr = new BinaryExpr(new Operator(oper), expr, expr1, new SourcePosition(exprLineNum));
         }
         return expr;
     }
     private Expression parseUnaryExpr() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Expression expr;
         if (token.kind == Token.TokenKind.MINUS || token.kind == Token.TokenKind.NOT) {
             Token oper = token;
             accept(token.kind);
-            return new UnaryExpr(new Operator(oper), parseUnaryExpr(), null);
+            return new UnaryExpr(new Operator(oper), parseUnaryExpr(), new SourcePosition(exprLineNum));
         } else {
             return parseBaseExpression();
         }
@@ -532,22 +547,24 @@ public class Parser {
  */
 
     private Expression parseBaseExpression() throws SyntaxError {
+        int exprLineNum = scanner.getLineNumber();
+
         Token literalToken;
         Expression expr;
         switch (token.kind) {
             case NULL:
                 literalToken = token;
                 accept(token.kind);
-                return new LiteralExpr(new NullLiteral(literalToken), null);
+                return new LiteralExpr(new NullLiteral(literalToken), new SourcePosition(exprLineNum));
             case NUM:
                 literalToken = token;
                 accept(token.kind);
-                return new LiteralExpr(new IntLiteral(literalToken), null);
+                return new LiteralExpr(new IntLiteral(literalToken), new SourcePosition(exprLineNum));
             case TRUE:
             case FALSE:
                 literalToken = token;
                 accept(token.kind);
-                return new LiteralExpr(new BooleanLiteral(literalToken), null);
+                return new LiteralExpr(new BooleanLiteral(literalToken), new SourcePosition(exprLineNum));
             case NEW:
                 accept(token.kind);
                 switch(token.kind) {
@@ -557,12 +574,12 @@ public class Parser {
                         if (token.kind == Token.TokenKind.OPENPAREN) {
                             accept(token.kind);
                             accept(Token.TokenKind.CLOSEPAREN);
-                            return new NewObjectExpr(new ClassType(new Identifier(idToken), null), null);
+                            return new NewObjectExpr(new ClassType(new Identifier(idToken), new SourcePosition(exprLineNum)), new SourcePosition(exprLineNum));
                         } else if (token.kind == Token.TokenKind.OPENBRACKET) {
                             accept(token.kind);
                             expr = parseExpression();
                             accept(Token.TokenKind.CLOSEBRACKET);
-                            return new NewArrayExpr(new ClassType(new Identifier(idToken), null), expr, null);
+                            return new NewArrayExpr(new ClassType(new Identifier(idToken), new SourcePosition(exprLineNum)), expr, new SourcePosition(exprLineNum));
                         } else {
                             parseError("invalid token after new id");
                         }
@@ -571,7 +588,7 @@ public class Parser {
                         accept(Token.TokenKind.OPENBRACKET);
                         expr = parseExpression();
                         accept(Token.TokenKind.CLOSEBRACKET);
-                        return new NewArrayExpr(new BaseType(TypeKind.INT, null), expr, null);
+                        return new NewArrayExpr(new BaseType(TypeKind.INT, new SourcePosition(exprLineNum)), expr, new SourcePosition(exprLineNum));
                     default:
                         parseError("invalid token after new");
                 }
@@ -587,7 +604,7 @@ public class Parser {
                     accept(token.kind);
                     expr = parseExpression();
                     accept(Token.TokenKind.CLOSEBRACKET);
-                    return new IxExpr(ref, expr, null);
+                    return new IxExpr(ref, expr, new SourcePosition(exprLineNum));
                 } else if (token.kind == Token.TokenKind.OPENPAREN) {
                     accept(token.kind);
                     ExprList exprList = new ExprList();
@@ -595,9 +612,9 @@ public class Parser {
                         exprList = parseArgumentList();
                     }
                     accept(Token.TokenKind.CLOSEPAREN);
-                    return new CallExpr(ref, exprList, null);
+                    return new CallExpr(ref, exprList, new SourcePosition(exprLineNum));
                 }
-                return new RefExpr(ref, null);
+                return new RefExpr(ref, new SourcePosition(exprLineNum));
             default:
                 parseError("invalid expression");
                 return null;
@@ -620,7 +637,7 @@ public class Parser {
                     "' but found '" + token.kind + "'");
     }
 
-    // show parse stack whenever terminal is  accepted
+    // show parse stack whenever terminal is accepted
     private void pTrace() {
         StackTraceElement [] stl = Thread.currentThread().getStackTrace();
         for (int i = stl.length - 1; i > 0 ; i--) {

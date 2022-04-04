@@ -85,8 +85,9 @@ public class Identification implements Visitor<Object, Object> {
         }
 
         // visit all members
-        for(FieldDecl fd: cd.fieldDeclList)
+        for(FieldDecl fd: cd.fieldDeclList) {
             fd.visit(this, null);
+        }
         for(MethodDecl md: cd.methodDeclList) {
             md.visit(this, null);
         }
@@ -226,14 +227,14 @@ public class Identification implements Visitor<Object, Object> {
         stmt.cond.visit(this, null);
         table.openScope();
         if (stmt.thenStmt instanceof VarDeclStmt) {
-            idError("solitary variable declaration in THEN branch of if statement");
+            idError("Solitary variable declaration in THEN branch of if statement");
         }
         stmt.thenStmt.visit(this, null);
         table.closeScope();
         if (stmt.elseStmt != null) {
             table.openScope();
             if (stmt.elseStmt instanceof VarDeclStmt) {
-                idError("solitary variable declaration in ELSE branch of if statement");
+                idError("Solitary variable declaration in ELSE branch of if statement");
             }
             stmt.elseStmt.visit(this, null);
             table.closeScope();
@@ -487,13 +488,10 @@ public class Identification implements Visitor<Object, Object> {
 
             } else if (idRef.decl instanceof ClassDecl) {
                 ClassDecl classDecl = (ClassDecl) idRef.decl;
-                if (classDecl.type.typeKind != TypeKind.CLASS) {
-                    idError("Cannot use dot operator on reference which does not point to a class declaration");
-                }
 
                 // instead of finding the class which idRef is a type of, we have direct access to it
                 // don't need to cast the type of the decl to a class decl and then search classes
-                // also dont need to check if classDecl is false
+                // also dont need to check if classDecl is a class
 
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {

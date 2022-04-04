@@ -24,16 +24,16 @@ public class Compiler {
         Scanner scanner = new Scanner(inputStream, errorReporter);
         Parser parser = new Parser(scanner, errorReporter);
 
-        System.out.println("Beginning syntactic analysis: ... ");
+        System.out.println("Beginning syntactic analysis: ...");
         AST ast = parser.parse();
-        System.out.println("Syntactic analysis complete: ");
+        System.out.println("Syntactic analysis complete:");
         if (errorReporter.hasErrors()) {
             System.out.println("Syntactically invalid miniJava program");
             System.exit(4);
         } else {
             System.out.println("Syntactically valid miniJava program");
 //            new ASTDisplay().showTree(ast);
-            System.out.println("Beginning identification: ... ");
+            System.out.println("Beginning identification: ...");
             Identification identification = new Identification(ast, errorReporter);
             identification.identify();
             System.out.println("Identification complete: ");
@@ -42,7 +42,7 @@ public class Compiler {
                 System.exit(4);
             } else {
                 System.out.println("Identification successful");
-                System.out.println("Beginning type checking");
+                System.out.println("Beginning type checking: ...");
             }
             System.exit(0);
         }

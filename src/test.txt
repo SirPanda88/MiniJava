@@ -1,38 +1,34 @@
 
-class Test {
 
-    void p(Test2 t) {
-        Test2[] test2Arr = new Test2[7];
-        test2Arr[1] = new Test2();
-        Test1 x = test2Arr[3];
-    }
-}
-
-class Test2 {
-    int x;
-}
-
-
-
-
-
-
-
-
-
-
-/*
 class A {
-    B b;
+    static B b;
 }
 
 class B {
     C c;
 }
 
+class C {
+    int x;
+}
+
 class Test {
-    method() {
-        A.b.c
+    void method() {
+        A.b.c.x = 5;
     }
+}
+
+/*
+class Test {
+
+    void p(T t) {
+        T[] testArr = new T[7];
+        testArr[1] = new T();
+        T x = testArr[3];
+    }
+}
+
+class T {
+    int x;
 }
 */

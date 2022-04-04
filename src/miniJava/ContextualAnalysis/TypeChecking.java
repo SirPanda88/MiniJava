@@ -42,6 +42,11 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitClassDecl(ClassDecl cd, Object arg) {
+
+        // visit all member, no types to check in FieldDecls so just visit all MethodDecls
+        for(MethodDecl md: cd.methodDeclList) {
+            md.visit(this, null);
+        }
         return null;
     }
 
@@ -52,6 +57,30 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitMethodDecl(MethodDecl md, Object arg) {
+        for (Statement st : md.statementList) {
+            st.visit(this, null);
+        }
+
+        if (md.type.typeKind == TypeKind.VOID) {
+            for (int i = 0; i < md.statementList.size(); i++) {
+                if (md.statementList.get(i) instanceof ReturnStmt) {
+                    if (( (ReturnStmt) (md.statementList.get(i)) ).returnExpr != null) {
+                        typeError("Return expression not allowed for method of type void");
+                    }
+                }
+            }
+        } else {
+            for (int i = 0; i < md.statementList.size(); i++) {
+                if (md.statementList.get(i) instanceof ReturnStmt) {
+                    if ( md.type.sameType( ( ( (ReturnStmt) (md.statementList.get(i)) ).returnExpr.typeAttribute ) ) ) {
+                        typeError("Return expression not the same type as method");
+                    }
+                }
+            }
+            if ( !(md.statementList.get(md.statementList.size() - 1) instanceof ReturnStmt) ) {
+                typeError("Last statement in method not a return statement");
+            }
+        }
         return null;
     }
 
@@ -88,36 +117,77 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitBlockStmt(BlockStmt stmt, Object arg) {
+        for (Statement statement : stmt.sl) {
+            statement.visit(this, null);
+        }
         return null;
     }
 
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
+        stmt.initExp.visit(this, null);
+        if ( !( stmt.varDecl.type.sameType(stmt.initExp.typeAttribute) ) ) {
+            typeError("Expression does not match type of variable declaration");
+        }
         return null;
     }
 
     @Override
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
+        stmt.val.visit(this, null);
+        if ( !( stmt.ref.decl.type.sameType(stmt.val.typeAttribute) ) ) {
+            typeError("Assigned expression does not match type of variable");
+        }
         return null;
     }
 
     @Override
     public Object visitIxAssignStmt(IxAssignStmt stmt, Object arg) {
+        stmt.ix.visit(this, null);
+        if (stmt.ix.typeAttribute.typeKind != TypeKind.INT) {
+            typeError("Size expression is not of type int in indexed array assignment statement");
+        }
+        stmt.exp.visit(this, null);
+        if ( !( ( (ArrayType) (stmt.ref.decl.type) ).eltType.sameType(stmt.exp.typeAttribute) ) ) {
+            typeError("Assigned expression does not match element type of array");
+        }
         return null;
     }
 
     @Override
     public Object visitCallStmt(CallStmt stmt, Object arg) {
+        if (( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.size() != stmt.argList.size()) {
+            typeError("Size of argument list does not match size of argument list of referenced method");
+        }
+
+        // compare referenced method parameter types to passed in parameters
+        for (int i = 0; i < ( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.size(); i++) {
+            TypeDenoter paramType = ( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.get(i).type;
+            if (!paramType.sameType(stmt.argList.get(i).typeAttribute)) {
+                typeError("CallExpr has different argument type than referenced method");
+            }
+        }
         return null;
     }
 
     @Override
     public Object visitReturnStmt(ReturnStmt stmt, Object arg) {
+        if (stmt.returnExpr != null) {
+            stmt.returnExpr.visit(this, null);
+        }
         return null;
     }
 
     @Override
     public Object visitIfStmt(IfStmt stmt, Object arg) {
+        stmt.cond.visit(this, null);
+        if (stmt.cond.typeAttribute.typeKind != TypeKind.BOOLEAN) {
+            typeError("Condition of if stmt is not of type boolean");
+        }
+        stmt.thenStmt.visit(this, null);
+        if (stmt.elseStmt != null) {
+            stmt.elseStmt.visit(this, null);
+        }
         return null;
     }
 
@@ -125,7 +195,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitWhileStmt(WhileStmt stmt, Object arg) {
         stmt.cond.visit(this, null);
         if (stmt.cond.typeAttribute.typeKind != TypeKind.BOOLEAN) {
-            typeError("Condition expression is not of type boolean in while statement");
+            typeError("Condition of while statement is not of type boolean");
         }
         stmt.body.visit(this, null);
         return null;
@@ -214,7 +284,7 @@ public class TypeChecking implements Visitor<Object, Object> {
         expr.typeAttribute = ((ArrayType)(expr.ref.decl.type)).eltType;
         expr.ixExpr.visit(this, null);
         if (expr.ixExpr.typeAttribute.typeKind != TypeKind.INT) {
-            typeError("Size expression is not of type int in index array expression");
+            typeError("Size expression is not of type int in indexed array expression");
         }
         return null;
     }
