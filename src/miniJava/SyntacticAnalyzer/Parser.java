@@ -180,17 +180,19 @@ public class Parser {
 
     // ParameterList ::= Type id ( , Type id )*
     private ParameterDeclList parseParameterList() throws SyntaxError {
+        int parameterLineNum = scanner.getLineNumber();
         ParameterDeclList pdl = new ParameterDeclList();
         TypeDenoter typeDenoter = parseType();
         String paramName = token.spelling;
         accept(Token.TokenKind.ID);
-        pdl.add(new ParameterDecl(typeDenoter, paramName, null));
+        pdl.add(new ParameterDecl(typeDenoter, paramName, new SourcePosition(parameterLineNum)));
         while (token.kind == Token.TokenKind.COMMA) {
             accept(Token.TokenKind.COMMA);
+            parameterLineNum = scanner.getLineNumber();
             typeDenoter = parseType();
             paramName = token.spelling;
             accept(Token.TokenKind.ID);
-            pdl.add(new ParameterDecl(typeDenoter, paramName, null));
+            pdl.add(new ParameterDecl(typeDenoter, paramName, new SourcePosition(parameterLineNum)));
         }
         return pdl;
     }
@@ -210,6 +212,7 @@ public class Parser {
 
     // Reference ::= id | this | Reference . id
     private Reference parseReference() throws SyntaxError {
+
         QualRef qualRef;
         BaseRef baseRef = null;
         switch (token.kind) {

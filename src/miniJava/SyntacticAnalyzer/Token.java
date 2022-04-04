@@ -10,6 +10,9 @@ public class Token {
         this.spelling = spelling;
     }
 
+    public SourcePosition getPosn() {
+        return this.sourcePosition;
+    }
 
     public enum TokenKind {
         EOT,
