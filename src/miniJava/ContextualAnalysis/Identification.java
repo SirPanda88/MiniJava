@@ -3,6 +3,8 @@ package miniJava.ContextualAnalysis;
 import miniJava.AbstractSyntaxTrees.*;
 import miniJava.AbstractSyntaxTrees.Package;
 import miniJava.ErrorReporter;
+import miniJava.SyntacticAnalyzer.SourcePosition;
+import miniJava.SyntacticAnalyzer.Token;
 
 public class Identification implements Visitor<Object, Object> {
 
@@ -17,6 +19,28 @@ public class Identification implements Visitor<Object, Object> {
         table = new IdTable(reporter);
         this.ast = ast;
         withinStaticMethod = false;
+
+
+        // TODO: add predefined classes into the ast
+        Token classname = new Token(Token.TokenKind.ID, "System", null);
+//        FieldDeclList fdl = new FieldDeclList();
+//        MethodDeclList mdl = new MethodDeclList();
+//
+//        TypeDenoter td = new ClassType(new Identifier(classname), null);
+//        fdl.add(new FieldDecl(false, true, td, out, new SourcePosition(memberLineNum)));
+//
+//
+//        classname = new Token(Token.TokenKind.ID, "_PrintStream", null);
+//        classname = new Token(Token.TokenKind.ID, "String", null);
+
+
+
+//        ClassType _PrintStream = new ClassType(new Identifier(new Token(Token.TokenKind.ID, "_PrintStream", null)), null);
+//        FieldDecl out = new FieldDecl(false, true, _PrintStream, "out", null);
+//        ClassDecl system = new ClassDecl("System", new FieldDeclList(), new MethodDeclList(), null);
+
+
+        ( (Package) ast ).classDeclList.add(new ClassDecl("String", new FieldDeclList(), new MethodDeclList(), null));
     }
 
     // identificationError is used to trace error when identification fails

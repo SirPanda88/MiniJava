@@ -17,6 +17,12 @@ abstract public class TypeDenoter extends AST {
     }
 
     public boolean sameType(TypeDenoter other) {
+        if (typeKind == TypeKind.ERROR || other.typeKind == TypeKind.ERROR) {
+            return true;
+        }
+        if (typeKind == TypeKind.UNSUPPORTED || other.typeKind == TypeKind.UNSUPPORTED) {
+            return false;
+        }
         if (typeKind == TypeKind.NULL) {
             return other.typeKind == TypeKind.CLASS || other.typeKind == TypeKind.ARRAY || other.typeKind == TypeKind.NULL;
         }
