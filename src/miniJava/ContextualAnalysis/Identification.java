@@ -10,11 +10,12 @@ public class Identification implements Visitor<Object, Object> {
     private ErrorReporter reporter;
     private ClassDecl currentClass;
     private boolean withinStaticMethod;
+    private AST ast;
 
-    public Identification(Package ast, ErrorReporter reporter) {
+    public Identification(AST ast, ErrorReporter reporter) {
         this.reporter = reporter;
         table = new IdTable(reporter);
-        ast.visit(this, null);
+        this.ast = ast;
         withinStaticMethod = false;
     }
 
@@ -28,6 +29,18 @@ public class Identification implements Visitor<Object, Object> {
         throw new IdentificationError();
     }
 
+    // parse input while catching any possible errors
+    public void identify() {
+        try {
+            ast.visit(this, null);
+        }
+        catch (Identification.IdentificationError e) {
+
+        }
+        catch (IllegalArgumentException ie) {
+            System.out.println("Identification error: " + ie.getMessage());
+        }
+    }
     // TODO: put visitPackage inside of try catch finally block
     // catch illegal argument exception thrown by idTable to find duplicate declarations
     // have each method throw IdentificationError
@@ -202,8 +215,9 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitReturnStmt(ReturnStmt stmt, Object arg) {
-        if (stmt.returnExpr != null)
+        if (stmt.returnExpr != null) {
             stmt.returnExpr.visit(this, null);
+        }
         return null;
     }
 
@@ -305,7 +319,7 @@ public class Identification implements Visitor<Object, Object> {
         TypeKind arrType = expr.eltType.typeKind;
         if (arrType == TypeKind.CLASS) {
             Identifier arrTypeName = ((ClassType)(expr.eltType)).className;
-            Declaration originalDecl = table.searchClasses(arrTypeName.spelling);
+            ClassDecl originalDecl = (ClassDecl) table.searchClasses(arrTypeName.spelling);
             if (originalDecl == null) {
                 idError("Undeclared class identifier after 'new' in new array expr");
                 return null;
@@ -401,19 +415,178 @@ public class Identification implements Visitor<Object, Object> {
             IdRef idRef = (IdRef) arg;
             String className;
 
-            if (idRef.decl instanceof VarDecl) {
-                VarDecl varDecl = (VarDecl) idRef.decl;
-                if (varDecl.type.typeKind != TypeKind.CLASS) {
+            if (idRef.decl instanceof LocalDecl) {
+                LocalDecl localDecl = (LocalDecl) idRef.decl;
+                if (localDecl.type.typeKind != TypeKind.CLASS) {
                     idError("Cannot use dot operator on reference which does not point to a class declaration");
                 }
-                className = ( (ClassType) varDecl.type ).className.spelling;
 
+                // find the class which idRef is a type of
+                className = ( (ClassType) localDecl.type ).className.spelling;
+                ClassDecl classDecl = (ClassDecl) table.searchClasses(className);
+                if (classDecl == null) {
+                    idError("Undeclared class identifier for localDecl of IdRef in QualRef");
+                    return null;
+                }
+
+                // search class members for id
+                for (FieldDecl fd : classDecl.fieldDeclList) {
+                    if (id.spelling.equals(fd.name)) {
+                        if (fd.isPrivate) {
+                            idError("QualRef to a member of another class may not have private visibility");
+                        }
+                        id.decl = fd;
+                        return null;
+                    }
+                }
+                for (MethodDecl md : classDecl.methodDeclList) {
+                    if (id.spelling.equals(md.name)) {
+                        if (md.isPrivate) {
+                            idError("QualRef to a member of another class may not have private visibility");
+                        }
+                        id.decl = md;
+                        return null;
+                    }
+                }
+                idError("Identifier not found in referenced class for ID.ID QualRef, first ID points to localDecl");
+
+            } else if (idRef.decl instanceof MemberDecl) {
+                MemberDecl memberDecl = (MemberDecl) idRef.decl;
+                if (memberDecl.type.typeKind != TypeKind.CLASS) {
+                    idError("Cannot use dot operator on reference which does not point to a class declaration");
+                }
+
+                // find the class which idRef is a type of
+                className = ( (ClassType) memberDecl.type ).className.spelling;
+                ClassDecl classDecl = (ClassDecl) table.searchClasses(className);
+                if (classDecl == null) {
+                    idError("Undeclared class identifier for memberDecl of IdRef in QualRef");
+                    return null;
+                }
+
+                // search class members for id
+                for (FieldDecl fd : classDecl.fieldDeclList) {
+                    if (id.spelling.equals(fd.name)) {
+                        if (fd.isPrivate) {
+                            idError("QualRef to a member of another class may not have private visibility");
+                        }
+                        id.decl = fd;
+                        return null;
+                    }
+                }
+                for (MethodDecl md : classDecl.methodDeclList) {
+                    if (id.spelling.equals(md.name)) {
+                        if (md.isPrivate) {
+                            idError("QualRef to a member of another class may not have private visibility");
+                        }
+                        id.decl = md;
+                        return null;
+                    }
+                }
+                idError("Identifier not found in referenced class for ID.ID QualRef, first ID points to memberDecl");
+
+            } else if (idRef.decl instanceof ClassDecl) {
+                ClassDecl classDecl = (ClassDecl) idRef.decl;
+                if (classDecl.type.typeKind != TypeKind.CLASS) {
+                    idError("Cannot use dot operator on reference which does not point to a class declaration");
+                }
+
+                // instead of finding the class which idRef is a type of, we have direct access to it
+                // don't need to cast the type of the decl to a class decl and then search classes
+                // also dont need to check if classDecl is false
+
+                // search class members for id
+                for (FieldDecl fd : classDecl.fieldDeclList) {
+                    if (id.spelling.equals(fd.name)) {
+                        if (fd.isPrivate) {
+                            idError("QualRef to a member of another class may not have private visibility");
+                        }
+                        if (!fd.isStatic) {
+                            idError("QualRef to a member of a class must be declared to have static access");
+                        }
+                        id.decl = fd;
+                        return null;
+                    }
+                }
+                for (MethodDecl md : classDecl.methodDeclList) {
+                    if (id.spelling.equals(md.name)) {
+                        if (md.isPrivate) {
+                            idError("QualRef to a member of another class may not have private visibility");
+                        }
+                        if (!md.isStatic) {
+                            idError("QualRef to a member of a class must be declared to have static access");
+                        }
+                        id.decl = md;
+                        return null;
+                    }
+                }
+                idError("Identifier not found in referenced class for ID.ID QualRef, first ID points to classDecl");
             }
 
         } else if (arg instanceof QualRef) {
+            // arg must be a MemberDecl, and id must have both public and static access
 
+            // QualRef calling visitIdentifier looks like QualRef.id, or (id | this) (.id)* .id
+            // arbitrary number of qualrefs to the left of the dot operator
+            // previous qualref has already been decorated with its decl
+            // as stated above, the decl of previous qualref (arg) must be a MemberDecl
+            // check that previous qualref type is a class by checking its decl
+            // check if identifier is a member of the class referenced by the first id's decl's type
+            // check if identifier has both public and static access
+
+            QualRef qualRef = (QualRef) arg;
+            String className;
+
+            if (!(qualRef.decl instanceof MemberDecl)) {
+                idError("Qualref of QualRef.id does not point to a MemberDecl");
+            }
+            MemberDecl memberDecl = (MemberDecl) qualRef.decl;
+
+            // check that previous qualref type is a class by checking its decl
+            if (memberDecl.type.typeKind != TypeKind.CLASS) {
+                idError("Cannot use dot operator on reference which does not point to a class declaration");
+            }
+
+            // find the class which idRef is a type of
+            className = ( (ClassType) memberDecl.type ).className.spelling;
+            ClassDecl classDecl = (ClassDecl) table.searchClasses(className);
+            if (classDecl == null) {
+                idError("Undeclared class identifier for memberDecl of QualRef in QualRef");
+                return null;
+            }
+
+            // search class members for id
+            // check if identifier is a member of the class referenced by the first id's decl's type
+            // check if identifier has both public and static access
+            for (FieldDecl fd : classDecl.fieldDeclList) {
+                if (id.spelling.equals(fd.name)) {
+                    if (fd.isPrivate) {
+                        idError("QualRef to a member of another class may not have private visibility");
+                    }
+//                    if (!fd.isStatic) {
+//                        idError("QualRef to a member of a class must be declared to have static access");
+//                    }
+                    id.decl = fd;
+                    return null;
+                }
+            }
+            for (MethodDecl md : classDecl.methodDeclList) {
+                if (id.spelling.equals(md.name)) {
+                    if (md.isPrivate) {
+                        idError("QualRef to a member of another class may not have private visibility");
+                    }
+//                    if (!md.isStatic) {
+//                        idError("QualRef to a member of a class must be declared to have static access");
+//                    }
+                    id.decl = md;
+                    return null;
+                }
+            }
+            idError("Identifier not found in referenced class for QualRef.ID QualRef");
         }
 
+        idError("Should never reach a call to visitIdentifier with non reference arg");
+        return null;
 
 //        Declaration originalDecl = table.search(id.spelling);
 //        if (originalDecl == null) {

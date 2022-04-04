@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
+import miniJava.ContextualAnalysis.Identification;
 import miniJava.SyntacticAnalyzer.Scanner;
 import miniJava.SyntacticAnalyzer.Parser;
 import miniJava.AbstractSyntaxTrees.*;
@@ -23,15 +24,26 @@ public class Compiler {
         Scanner scanner = new Scanner(inputStream, errorReporter);
         Parser parser = new Parser(scanner, errorReporter);
 
-        System.out.println("Syntactic analysis: ... ");
+        System.out.println("Beginning syntactic analysis: ... ");
         AST ast = parser.parse();
-        System.out.println("Syntactic analysis complete:");
+        System.out.println("Syntactic analysis complete: ");
         if (errorReporter.hasErrors()) {
-            System.out.println("Invalid miniJava program");
+            System.out.println("Syntactically invalid miniJava program");
             System.exit(4);
         } else {
-            System.out.println("Valid miniJava program");
-            new ASTDisplay().showTree(ast);
+            System.out.println("Syntactically valid miniJava program");
+//            new ASTDisplay().showTree(ast);
+            System.out.println("Beginning identification: ... ");
+            Identification identification = new Identification(ast, errorReporter);
+            identification.identify();
+            System.out.println("Identification complete: ");
+            if (errorReporter.hasErrors()) {
+                System.out.println("Identification unsuccessful - contextually invalid miniJava program");
+                System.exit(4);
+            } else {
+                System.out.println("Identification successful");
+                System.out.println("Beginning type checking");
+            }
             System.exit(0);
         }
     }

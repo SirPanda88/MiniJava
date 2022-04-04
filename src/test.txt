@@ -2,7 +2,9 @@
 class Test {
 
     void p(Test2 t) {
-        Test2[] test2Arr = new Test2[];
+        Test2[] test2Arr = new Test2[7];
+        test2Arr[1] = new Test2();
+        Test1 x = test2Arr[3];
     }
 }
 
@@ -10,3 +12,27 @@ class Test2 {
     int x;
 }
 
+
+
+
+
+
+
+
+
+
+/*
+class A {
+    B b;
+}
+
+class B {
+    C c;
+}
+
+class Test {
+    method() {
+        A.b.c
+    }
+}
+*/

@@ -25,10 +25,10 @@ public class Scanner {
     public Token scan() {
         // skip whitespace and comments
         while (!eot && (isWhiteSpace(currentChar) || currentChar == '/')) {
-            if (currentChar == '\n') {
-                lineNumber++;
-            }
             if (isWhiteSpace(currentChar)) {
+                if (currentChar == '\n' || currentChar == '\r') {
+                    lineNumber++;
+                }
                 skipIt();
                 continue;
             }
@@ -40,31 +40,36 @@ public class Scanner {
             if (!eot && currentChar == '*') {
                 skipIt();
                 char temp = currentChar;
+                if (currentChar == '\n' || currentChar == '\r') {
+                    lineNumber++;
+                }
                 skipIt();
                 while (!eot && (currentChar != '/' || temp != '*')) {
                     temp = currentChar;
-                    skipIt();
-                }
-                if (eot) {
-                    scanError("Unterminated * comment in input");
-                    return(new Token(Token.TokenKind.ERROR, "Unterminated * comment in input"));
-                }
-                skipIt();
-                // skip //
-            } else if (!eot && currentChar == '/') {
-                while (!eot && (currentChar != '\n' && currentChar != '\r')) {
-                    if (currentChar == '\n') {
+                    if (currentChar == '\n' || currentChar == '\r') {
                         lineNumber++;
                     }
                     skipIt();
                 }
                 if (eot) {
-                    scanError("Unterminated single line comment in input");
-                    return(new Token(Token.TokenKind.ERROR, "Unterminated single line comment in input"));
+                    scanError("Unterminated * comment in input");
+                    return(new Token(Token.TokenKind.ERROR, "Unterminated * comment in input", new SourcePosition(lineNumber)));
                 }
                 skipIt();
+                // skip //
+            } else if (!eot && currentChar == '/') {
+                while (!eot && (currentChar != '\n' && currentChar != '\r')) {
+                    skipIt();
+                }
+                if (eot) {
+                    scanError("Unterminated single line comment in input");
+                    return(new Token(Token.TokenKind.ERROR, "Unterminated single line comment in input", new SourcePosition(lineNumber)));
+                }
+                // end of single line comment, increment line number
+                lineNumber++;
+                skipIt();
             } else {
-                return(new Token(Token.TokenKind.DIV, "/"));
+                return(new Token(Token.TokenKind.DIV, "/", new SourcePosition(lineNumber)));
             }
         }
 
@@ -74,7 +79,7 @@ public class Scanner {
         String spelling = currentSpelling.toString();
 
         // return new token
-        return new Token(kind, spelling);
+        return new Token(kind, spelling, new SourcePosition(lineNumber));
     }
 
     public Token.TokenKind scanToken() {

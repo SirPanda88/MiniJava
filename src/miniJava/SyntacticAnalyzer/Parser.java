@@ -34,24 +34,24 @@ public class Parser {
 
     // Program ::= (ClassDeclaration)* eot
     private Package parseProgram() throws SyntaxError {
-//        int packageLineNum = scanner.getLineNumber();
+        int packageLineNum = scanner.getLineNumber();
         ClassDeclList cdl = new ClassDeclList();
         while (token.kind != Token.TokenKind.EOT) {
             ClassDecl cd = parseClassDeclaration();
             cdl.add(cd);
         }
         accept(Token.TokenKind.EOT);
-        return new Package(cdl, null);
+        return new Package(cdl, new SourcePosition(packageLineNum));
     }
 
     // ClassDeclaration ::= class id { ( FieldDeclaration | MethodDeclaration )* }
     private ClassDecl parseClassDeclaration() throws SyntaxError {
-//        int classLineNum = scanner.getLineNumber();
+        int classLineNum = scanner.getLineNumber();
 
         accept(Token.TokenKind.CLASS);
 
         // create classname variable to hold name info
-        Token classname = new Token(Token.TokenKind.ID, token.spelling);
+        Token classname = new Token(Token.TokenKind.ID, token.spelling, token.sourcePosition);
 
         accept(Token.TokenKind.ID);
         accept(Token.TokenKind.OPENCURLY);
@@ -63,20 +63,19 @@ public class Parser {
         while (token.kind != Token.TokenKind.EOT && token.kind != Token.TokenKind.CLOSECURLY) {
             // FieldDeclaration ::= Visibility Access Type id ;
             // MethodDeclaration ::= Visibility Access ( Type | void ) id ( ParameterList? ) {Statement*}
+            int memberLineNum = scanner.getLineNumber();
+
             boolean isPrivate = parseVisibility();
             boolean isStatic = parseAccess();
             TypeDenoter typeDenoter;
             String memberName;
             ParameterDeclList pdl = new ParameterDeclList();
             StatementList stl = new StatementList();
-            int memberNameLineNum;
 
             if (token.kind == Token.TokenKind.VOID) {
-//                int typeLineNum = scanner.getLineNumber();
-                typeDenoter = new BaseType(TypeKind.VOID, null);
+                typeDenoter = new BaseType(TypeKind.VOID, token.sourcePosition);
                 accept(token.kind);
                 memberName = token.spelling;
-//                memberNameLineNum = scanner.getLineNumber();
                 accept(Token.TokenKind.ID);
                 accept(Token.TokenKind.OPENPAREN);
                 if (token.kind != Token.TokenKind.CLOSEPAREN) {
@@ -89,14 +88,14 @@ public class Parser {
                     stl.add(stmtInList);
                 }
                 accept(Token.TokenKind.CLOSECURLY);
-                mdl.add(new MethodDecl(new FieldDecl(isPrivate, isStatic, typeDenoter, memberName, null), pdl, stl, null));
+                mdl.add(new MethodDecl(new FieldDecl(isPrivate, isStatic, typeDenoter, memberName, new SourcePosition(memberLineNum)), pdl, stl, new SourcePosition(memberLineNum)));
             } else {
                 typeDenoter = parseType();
                 memberName = token.spelling;
                 accept(Token.TokenKind.ID);
                 if (token.kind == Token.TokenKind.SEMICOLON) {
                     accept(token.kind);
-                    fdl.add(new FieldDecl(isPrivate, isStatic, typeDenoter, memberName, null));
+                    fdl.add(new FieldDecl(isPrivate, isStatic, typeDenoter, memberName, new SourcePosition(memberLineNum)));
                 } else {
                     accept(Token.TokenKind.OPENPAREN);
                     if (token.kind != Token.TokenKind.CLOSEPAREN) {
@@ -109,12 +108,12 @@ public class Parser {
                         stl.add(stmtInList);
                     }
                     accept(Token.TokenKind.CLOSECURLY);
-                    mdl.add(new MethodDecl(new FieldDecl(isPrivate, isStatic, typeDenoter, memberName, null), pdl, stl, null));
+                    mdl.add(new MethodDecl(new FieldDecl(isPrivate, isStatic, typeDenoter, memberName, new SourcePosition(memberLineNum)), pdl, stl, new SourcePosition(memberLineNum)));
                 }
             }
         }
         accept(Token.TokenKind.CLOSECURLY);
-        return new ClassDecl(classname.spelling, fdl, mdl, null);
+        return new ClassDecl(classname.spelling, fdl, mdl, new SourcePosition(classLineNum));
     }
 
     // Visibility ::= ( public | private )?
@@ -142,6 +141,7 @@ public class Parser {
 
     // Type ::= int | boolean | id | ( int | id ) []
     private TypeDenoter parseType() throws SyntaxError {
+        int typeLineNum = scanner.getLineNumber();
         switch (token.kind) {
             case INT:
             case ID:
@@ -151,9 +151,9 @@ public class Parser {
                     if (token.kind == Token.TokenKind.OPENBRACKET) {
                         accept(Token.TokenKind.OPENBRACKET);
                         accept(Token.TokenKind.CLOSEBRACKET);
-                        return new ArrayType(new BaseType(typeKind, null), null);
+                        return new ArrayType(new BaseType(typeKind, new SourcePosition(typeLineNum)), new SourcePosition(typeLineNum));
                     } else {
-                        return new BaseType(typeKind, null);
+                        return new BaseType(typeKind, new SourcePosition(typeLineNum));
                     }
                 } else if (token.kind == Token.TokenKind.ID) {
                     Token idToken = token;
@@ -161,20 +161,20 @@ public class Parser {
                     if (token.kind == Token.TokenKind.OPENBRACKET) {
                         accept(Token.TokenKind.OPENBRACKET);
                         accept(Token.TokenKind.CLOSEBRACKET);
-                        return new ArrayType(new ClassType(new Identifier(idToken), null), null);
+                        return new ArrayType(new ClassType(new Identifier(idToken), new SourcePosition(typeLineNum)), new SourcePosition(typeLineNum));
                     } else {
-                        return new ClassType(new Identifier(idToken), null);
+                        return new ClassType(new Identifier(idToken), new SourcePosition(typeLineNum));
                     }
                 }
             case BOOLEAN:
                 accept(token.kind);
-                return new BaseType(TypeKind.BOOLEAN, null);
+                return new BaseType(TypeKind.BOOLEAN, new SourcePosition(typeLineNum));
             case VOID:
                 accept(token.kind);
-                return new BaseType(TypeKind.VOID, null);
+                return new BaseType(TypeKind.VOID, new SourcePosition(typeLineNum));
             default:
                 parseError("invalid type");
-                return new BaseType(TypeKind.ERROR, null);
+                return new BaseType(TypeKind.ERROR, new SourcePosition(typeLineNum));
         }
     }
 
@@ -359,7 +359,7 @@ public class Parser {
                             accept(Token.TokenKind.ASSIGNMENT);
                             expr1 = parseExpression();
                             accept(Token.TokenKind.SEMICOLON);
-                            return new IxAssignStmt(new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName)), null),
+                            return new IxAssignStmt(new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName, null)), null),
                                     expr, expr1, null);
                         }
                     case ID:
@@ -372,7 +372,7 @@ public class Parser {
                         return new VarDeclStmt(new VarDecl(typeDenoter, idName, null), expr, null);
                     case DOT:
                         // we know it is one of the three references
-                        Identifier identifier = new Identifier(new Token(Token.TokenKind.ID, idName));
+                        Identifier identifier = new Identifier(new Token(Token.TokenKind.ID, idName, null));
                         baseRef = new IdRef(identifier, null);
                         accept(Token.TokenKind.DOT);
                         qualRef = new QualRef(baseRef, new Identifier(token), null);
@@ -386,7 +386,7 @@ public class Parser {
                         reference = qualRef;
                     default:
                         if (qualRef == null) {
-                            reference = new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName)), null);
+                            reference = new IdRef(new Identifier(new Token(Token.TokenKind.ID, idName, null)), null);
                         }
                         switch (token.kind) {
                             case ASSIGNMENT:

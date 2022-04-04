@@ -3,15 +3,13 @@ package miniJava.SyntacticAnalyzer;
 public class Token {
     public TokenKind kind;
     public String spelling;
+    public SourcePosition sourcePosition;
 
-    public Token (TokenKind kind, String spelling) {
+    public Token (TokenKind kind, String spelling, SourcePosition posn) {
         this.kind = kind;
         this.spelling = spelling;
     }
 
-    public SourcePosition getPosn() {
-        return null;
-    }
 
     public enum TokenKind {
         EOT,
