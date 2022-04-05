@@ -48,12 +48,12 @@ public class Identification implements Visitor<Object, Object> {
         private static final long serialVersionUID = 1L;
     }
 
-    private void idError(String e) throws Identification.IdentificationError {
-        reporter.reportError("Identification error: " + e);
+    private void idError(String e, int line) throws Identification.IdentificationError {
+        reporter.reportError("*** line " + line + ": Identification error: " + e);
         throw new IdentificationError();
     }
 
-    // parse input while catching any possible errors
+    // Decorate all identifier and reference nodes with corresponding declarations while catching any possible errors
     public void identify() {
         try {
             ast.visit(this, null);
@@ -65,10 +65,6 @@ public class Identification implements Visitor<Object, Object> {
             System.out.println("Identification error: " + ie.getMessage());
         }
     }
-    // TODO: put visitPackage inside of try catch finally block
-    // catch illegal argument exception thrown by idTable to find duplicate declarations
-    // have each method throw IdentificationError
-
 
 
     // Package
@@ -77,9 +73,15 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitPackage(Package prog, Object arg) {
         table.openScope();
 
-        // add all the classes to the table.
-        for(ClassDecl cd: prog.classDeclList) {
-            table.enter(cd);
+        // add all the classes to the table, catch duplicate class declarations
+        int line = 0;
+        try {
+            for(ClassDecl cd: prog.classDeclList) {
+                line = cd.posn.getLineNumber();
+                table.enter(cd);
+            }
+        } catch (IllegalArgumentException e) {
+            idError(e.getMessage(), line);
         }
 
         //then visit classes
@@ -101,12 +103,20 @@ public class Identification implements Visitor<Object, Object> {
 
         // add members so all fields and methods are visible
         table.openScope();
-        for(FieldDecl fd: cd.fieldDeclList) {
-            table.enter(fd);
+        int line = 0;
+        try {
+            for(FieldDecl fd: cd.fieldDeclList) {
+                line = fd.posn.getLineNumber();
+                table.enter(fd);
+            }
+            for(MethodDecl md: cd.methodDeclList) {
+                line = md.posn.getLineNumber();
+                table.enter(md);
+            }
+        } catch (IllegalArgumentException e) {
+            idError(e.getMessage(), line);
         }
-        for(MethodDecl md: cd.methodDeclList) {
-            table.enter(md);
-        }
+
 
         // visit all members
         for(FieldDecl fd: cd.fieldDeclList) {
@@ -149,14 +159,24 @@ public class Identification implements Visitor<Object, Object> {
     @Override
     public Object visitParameterDecl(ParameterDecl pd, Object arg) {
         pd.type.visit(this, null);
-        table.enter(pd);
+        int line = pd.posn.getLineNumber();;
+        try {
+            table.enter(pd);
+        } catch (IllegalArgumentException e) {
+            idError(e.getMessage(), line);
+        }
         return null;
     }
 
     @Override
     public Object visitVarDecl(VarDecl decl, Object arg) {
         decl.type.visit(this, null);
-        table.enter(decl);
+        int line = decl.posn.getLineNumber();
+        try {
+            table.enter(decl);
+        } catch (IllegalArgumentException e) {
+            idError(e.getMessage(), line);
+        }
         return null;
     }
 

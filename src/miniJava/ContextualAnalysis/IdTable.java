@@ -25,7 +25,7 @@ public class IdTable {
         if (currentScope.containsKey(decl.name)) {
             throw new IllegalArgumentException("Duplicate declaration (name already declared in current scope)");
         }
-        if (stack.topOfStack > 4) {
+        if (stack.topOfStack >= 4) {
             for (int i = 2; i < stack.arrList.size(); i++) {
                 if (stack.arrList.get(i).containsKey(decl.name)) {
                     throw new IllegalArgumentException("Declarations at level 4 or higher may not hide declarations at level 3 or higher");

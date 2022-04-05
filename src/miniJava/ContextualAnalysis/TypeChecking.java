@@ -8,10 +8,11 @@ import miniJava.SyntacticAnalyzer.Token;
 public class TypeChecking implements Visitor<Object, Object> {
 
     private ErrorReporter reporter;
+    private AST ast;
 
-    public TypeChecking (Package ast, ErrorReporter reporter) {
+    public TypeChecking (AST ast, ErrorReporter reporter) {
         this.reporter = reporter;
-        ast.visit(this, null);
+        this.ast = ast;
     }
 
     // typeError is used to trace error when identification fails
@@ -19,21 +20,31 @@ public class TypeChecking implements Visitor<Object, Object> {
         private static final long serialVersionUID = 1L;
     }
 
-    private void typeError(String e) throws TypeChecking.TypeError {
-        reporter.reportError("Type error: " + e);
-        throw new TypeChecking.TypeError();
+    private void typeError(String e, int line) throws TypeChecking.TypeError {
+        reporter.reportError("*** line " + line + ": Type error - " + e);
     }
 
 
+// TODO: put visitpackage inside of try catch
 
-
-
+    // Check type equality while catching any possible errors
+    public void typeCheck() {
+        try {
+            ast.visit(this, null);
+        }
+        catch (Exception e) {
+            System.out.println("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
+        }
+    }
 
 
     // Package
 
     @Override
     public Object visitPackage(Package prog, Object arg) {
+        for (ClassDecl cd : prog.classDeclList) {
+            cd.visit(this, null);
+        }
         return null;
     }
 

@@ -13,8 +13,10 @@ class C {
 }
 
 class Test {
-    void method() {
-        A.b.c.x = 5;
+
+    A a;
+    static void method() {
+        A.b.c.x = new C();
     }
 }
 

@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 
 import miniJava.ContextualAnalysis.Identification;
+import miniJava.ContextualAnalysis.TypeChecking;
 import miniJava.SyntacticAnalyzer.Scanner;
 import miniJava.SyntacticAnalyzer.Parser;
 import miniJava.AbstractSyntaxTrees.*;
@@ -36,13 +37,22 @@ public class Compiler {
             System.out.println("Beginning identification: ...");
             Identification identification = new Identification(ast, errorReporter);
             identification.identify();
-            System.out.println("Identification complete: ");
+            System.out.println("Identification complete:");
             if (errorReporter.hasErrors()) {
                 System.out.println("Identification unsuccessful - contextually invalid miniJava program");
                 System.exit(4);
             } else {
                 System.out.println("Identification successful");
                 System.out.println("Beginning type checking: ...");
+                TypeChecking typeChecker = new TypeChecking(ast, errorReporter);
+                typeChecker.typeCheck();
+                System.out.println("Type checking complete:");
+                if (errorReporter.hasErrors()) {
+                    System.out.println("Type checking unsuccessful - contextually invalid miniJava program");
+                    System.exit(4);
+                } else {
+                    System.out.println("Type checking successful - contextually valid miniJava program");
+                }
             }
             System.exit(0);
         }
