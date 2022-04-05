@@ -1,7 +1,7 @@
 
 
 class A {
-    static B b;
+    B b;
 }
 
 class B {
@@ -15,8 +15,9 @@ class C {
 class Test {
 
     A a;
-    static void method() {
-        A.b.c.x = new C();
+    static int method() {
+        A.b.c.x = null;
+        return A.b.c.x;
     }
 }
 

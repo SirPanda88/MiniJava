@@ -222,7 +222,7 @@ public class Parser {
                 accept(token.kind);
                 break;
             case THIS:
-                baseRef = new ThisRef(null);
+                baseRef = new ThisRef(new SourcePosition(refLineNum));
                 accept(token.kind);
                 break;
             default:

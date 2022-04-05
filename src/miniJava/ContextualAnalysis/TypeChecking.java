@@ -20,8 +20,8 @@ public class TypeChecking implements Visitor<Object, Object> {
         private static final long serialVersionUID = 1L;
     }
 
-    private void typeError(String e, int line) throws TypeChecking.TypeError {
-        reporter.reportError("*** line " + line + ": Type error - " + e);
+    private void typeError(String e) throws TypeChecking.TypeError {
+        reporter.reportError("*** line " + ": Type error - " + e);
     }
 
 
@@ -34,6 +34,7 @@ public class TypeChecking implements Visitor<Object, Object> {
         }
         catch (Exception e) {
             System.out.println("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
+            reporter.reportError("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
         }
     }
 
@@ -83,10 +84,18 @@ public class TypeChecking implements Visitor<Object, Object> {
         } else {
             for (int i = 0; i < md.statementList.size(); i++) {
                 if (md.statementList.get(i) instanceof ReturnStmt) {
-                    if ( md.type.sameType( ( ( (ReturnStmt) (md.statementList.get(i)) ).returnExpr.typeAttribute ) ) ) {
-                        typeError("Return expression not the same type as method");
+                    if (((ReturnStmt) md.statementList.get(i)).returnExpr == null) {
+                        typeError("Missing return expression in non void method");
+                        continue;
+                    }
+                    if ( ! (md.type.sameType( ( ( (ReturnStmt) (md.statementList.get(i)) ).returnExpr.typeAttribute ) ) ) ) {
+                        typeError("Return expression not the same type as non void method");
                     }
                 }
+            }
+            if (md.statementList.size() == 0) {
+                typeError("Missing return expression in non void method");
+                return null;
             }
             if ( !(md.statementList.get(md.statementList.size() - 1) instanceof ReturnStmt) ) {
                 typeError("Last statement in method not a return statement");
@@ -147,7 +156,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
         stmt.val.visit(this, null);
         if ( !( stmt.ref.decl.type.sameType(stmt.val.typeAttribute) ) ) {
-            typeError("Assigned expression does not match type of variable");
+            typeError("Assigned expression does not match type of reference");
         }
         return null;
     }
