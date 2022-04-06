@@ -50,4 +50,8 @@ public class IdTable {
     public Declaration searchClasses(String s) {
         return stack.searchClasses(s);
     }
+
+    public boolean contains(String s) {
+        return stack.contains(s);
+    }
 }

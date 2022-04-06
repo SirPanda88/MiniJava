@@ -222,8 +222,13 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
-        // visit right hand expression first
+        // check if left hand declaration exists already to prevent double errors
+        // visit right hand expression after checking if left exists
         // to prevent use of the declared variable in the initializing expression
+        // then visit left
+        if (table.contains(stmt.varDecl.name)) {
+            idError("Duplicate declaration (name already declared in current scope)", stmt.posn);
+        }
         stmt.initExp.visit(this, null);
         stmt.varDecl.visit(this, null);
         return null;
@@ -542,7 +547,6 @@ public class Identification implements Visitor<Object, Object> {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         if (!fd.isStatic) {
-                            System.out.println(id.spelling + " posn:");
                             idError("QualRef to a member of a class must be declared to have static access", id.posn);
                         }
                         id.decl = fd;

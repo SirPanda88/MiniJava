@@ -1,7 +1,24 @@
 
-
+// PA2 fail indexed ref
 class A {
-    B b;
+    void p(){
+        A x = B;
+    }
+}
+
+class B {
+    void p() {
+    return;
+    }
+}
+
+
+
+
+
+/*
+class A {
+    static B b;
 }
 
 class B {
@@ -17,9 +34,10 @@ class Test {
     A a;
     static int method() {
         A.b.c.x = null;
-        return A.b.c.x;
+        return A.b.c;
     }
 }
+*/
 
 /*
 class Test {

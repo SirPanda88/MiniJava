@@ -8,6 +8,7 @@ public class Token {
     public Token (TokenKind kind, String spelling, SourcePosition posn) {
         this.kind = kind;
         this.spelling = spelling;
+        this.sourcePosition = posn;
     }
 
     public SourcePosition getPosn() {
