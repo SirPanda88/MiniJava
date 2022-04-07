@@ -37,6 +37,10 @@ public class IdTable {
 
     public void closeScope() {
         stack.pop();
+        if (stack.topOfStack == 0) {
+            return;
+        }
+        currentScope = stack.peek();
     }
 
     public Declaration search(String s) {

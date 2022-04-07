@@ -1,5 +1,6 @@
 package miniJava;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -12,7 +13,32 @@ import miniJava.AbstractSyntaxTrees.*;
 
 public class Compiler {
 
-    public static void main (String[] args) {
+    public static void main (String[] args) throws FileNotFoundException {
+
+        // script for pa2
+//        File folder = new File("/Users/ezhan/Comp520/pa2_tests");
+//        File[] listOfFiles = folder.listFiles();
+//        int numFiles = 0;
+//        int failCount = 0;
+//        ErrorReporter errorReporter = new ErrorReporter();
+//
+//        for (int i = 0; i < listOfFiles.length; i++) {
+//            if (listOfFiles[i].isFile()) {
+//                System.out.println("(" + (++numFiles) + ") + Testing: " + listOfFiles[i].getName());
+//                AST ast = new Parser(new Scanner(new FileInputStream(listOfFiles[i]), errorReporter), errorReporter).parse();
+//                try {
+//                    new Identification(ast, errorReporter).identify();
+//                    new TypeChecking(ast, errorReporter).typeCheck();
+//                    System.out.println("PARSED");
+//                } catch (Exception e) {
+//                    failCount++;
+//                    e.printStackTrace();
+//                    System.out.println("PROBLEMO");
+//                }
+//            }
+//        }
+
+        // my compiler
         InputStream inputStream = null;
         try {
             inputStream = new FileInputStream(args[0]);

@@ -20,27 +20,39 @@ public class Identification implements Visitor<Object, Object> {
         this.ast = ast;
         withinStaticMethod = false;
 
-
-        // TODO: add predefined classes into the ast
-        Token classname = new Token(Token.TokenKind.ID, "System", null);
+        //attempt to add predefined classes
+//        Token classname = new Token(Token.TokenKind.ID, "System", null);
 //        FieldDeclList fdl = new FieldDeclList();
 //        MethodDeclList mdl = new MethodDeclList();
 //
 //        TypeDenoter td = new ClassType(new Identifier(classname), null);
 //        fdl.add(new FieldDecl(false, true, td, out, new SourcePosition(memberLineNum)));
-//
-//
+
 //        classname = new Token(Token.TokenKind.ID, "_PrintStream", null);
 //        classname = new Token(Token.TokenKind.ID, "String", null);
-
-
 
 //        ClassType _PrintStream = new ClassType(new Identifier(new Token(Token.TokenKind.ID, "_PrintStream", null)), null);
 //        FieldDecl out = new FieldDecl(false, true, _PrintStream, "out", null);
 //        ClassDecl system = new ClassDecl("System", new FieldDeclList(), new MethodDeclList(), null);
 
+        FieldDeclList fieldDeclListSystem = new FieldDeclList();
+        fieldDeclListSystem.add(new FieldDecl(false, true, new ClassType(new Identifier(new Token
+                (Token.TokenKind.ID, "_PrintStream", null)), null), "out", null));
+        ClassDecl system = new ClassDecl("System", fieldDeclListSystem, new MethodDeclList(), null);
 
-        ( (Package) ast ).classDeclList.add(new ClassDecl("String", new FieldDeclList(), new MethodDeclList(), null));
+        MethodDeclList methodDeclListPrintSystem = new MethodDeclList();
+        ParameterDeclList parameterDeclList = new ParameterDeclList();
+        parameterDeclList.add(new ParameterDecl(new BaseType(TypeKind.INT, null), "n", null));
+        methodDeclListPrintSystem.add(new MethodDecl(new FieldDecl(false, false, new BaseType
+                (TypeKind.VOID, null), "println", null), parameterDeclList, new StatementList(), null));
+        ClassDecl printStream = new ClassDecl("_PrintStream", new FieldDeclList(), methodDeclListPrintSystem, null);
+
+        ClassDecl string = new ClassDecl("String", new FieldDeclList(), new MethodDeclList(), null);
+
+        Package astAsPackage = (Package) ast;
+        astAsPackage.classDeclList.add(system);
+        astAsPackage.classDeclList.add(printStream);
+        astAsPackage.classDeclList.add(string);
     }
 
     // identificationError is used to trace error when identification fails
@@ -49,7 +61,7 @@ public class Identification implements Visitor<Object, Object> {
     }
 
     private void idError(String e, SourcePosition sp) throws Identification.IdentificationError {
-        reporter.reportError("*** line " + sp.getLineNumber() + ": Identification error: " + e);
+        reporter.reportError("*** line " + sp.getLineNumber() + ": Identification error - " + e);
         throw new IdentificationError();
     }
 
@@ -61,8 +73,8 @@ public class Identification implements Visitor<Object, Object> {
         catch (Identification.IdentificationError e) {
 
         }
-        catch (IllegalArgumentException ie) {
-            System.out.println("Identification error: " + ie.getMessage());
+        catch (Exception e) {
+            reporter.reportError("Should not encounter exceptions in identification. Exception message: " + e.getMessage());
         }
     }
 
@@ -191,7 +203,7 @@ public class Identification implements Visitor<Object, Object> {
         Identifier classTypeName = type.className;
         Declaration originalDecl = table.searchClasses(classTypeName.spelling);
         if (originalDecl == null) {
-            idError("Undeclared identifier after 'new' (not a class) in new object expr", type.posn);
+            idError("Undeclared class type", type.posn);
             return null;
         }
 //        if (table.scopeLevel(classTypeName.spelling) > 0) {
@@ -226,7 +238,7 @@ public class Identification implements Visitor<Object, Object> {
         // visit right hand expression after checking if left exists
         // to prevent use of the declared variable in the initializing expression
         // then visit left
-        if (table.contains(stmt.varDecl.name)) {
+        if (table.currentScope.containsKey(stmt.varDecl.name)) {
             idError("Duplicate declaration (name already declared in current scope)", stmt.posn);
         }
         stmt.initExp.visit(this, null);

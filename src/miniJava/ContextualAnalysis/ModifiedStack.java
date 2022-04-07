@@ -19,7 +19,10 @@ public class ModifiedStack {
     }
 
     public HashMap<String, Declaration> peek() {
-        return arrList.get(topOfStack);
+        if (topOfStack == 0) {
+            return null;
+        }
+        return arrList.get(topOfStack - 1);
     }
 
     public HashMap<String, Declaration> pop() {

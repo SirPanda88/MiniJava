@@ -11,10 +11,13 @@ public class ClassDecl extends Declaration {
 
   public ClassDecl(String cn, FieldDeclList fdl, MethodDeclList mdl, SourcePosition posn) {
 	  super(cn, new BaseType(TypeKind.ACTUALCLASS, null), posn);
+	  if (cn.equals("String")) {
+	      this.type = new BaseType(TypeKind.UNSUPPORTED, null);
+      }
 	  fieldDeclList = fdl;
 	  methodDeclList = mdl;
   }
-  
+
   public <A,R> R visit(Visitor<A, R> v, A o) {
       return v.visitClassDecl(this, o);
   }

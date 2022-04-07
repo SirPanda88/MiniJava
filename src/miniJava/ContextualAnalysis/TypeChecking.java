@@ -3,6 +3,7 @@ package miniJava.ContextualAnalysis;
 import miniJava.AbstractSyntaxTrees.*;
 import miniJava.AbstractSyntaxTrees.Package;
 import miniJava.ErrorReporter;
+import miniJava.SyntacticAnalyzer.SourcePosition;
 import miniJava.SyntacticAnalyzer.Token;
 
 public class TypeChecking implements Visitor<Object, Object> {
@@ -20,23 +21,22 @@ public class TypeChecking implements Visitor<Object, Object> {
         private static final long serialVersionUID = 1L;
     }
 
-    private void typeError(String e) throws TypeChecking.TypeError {
-        reporter.reportError("*** line " + ": Type error - " + e);
+    private void typeError(String e, SourcePosition sp) throws TypeChecking.TypeError {
+        reporter.reportError("*** line " + sp.getLineNumber() + ": Type error - " + e);
+//        throw new TypeError();
     }
 
 
-// TODO: put visitpackage inside of try catch
-    // TODO: check that no code after typeerror() depends on typeerror throws an exception and pauses program execution
-    // todo: set current expression node typeattribute to ERROR if typeerror occurs
-    // TODO: check all casts are valid
-
     // Check type equality while catching any possible errors
     public void typeCheck() {
+        ast.visit(this, null);
         try {
             ast.visit(this, null);
         }
+        catch (TypeChecking.TypeError e) {
+
+        }
         catch (Exception e) {
-            System.out.println("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
             reporter.reportError("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
         }
     }
@@ -80,7 +80,7 @@ public class TypeChecking implements Visitor<Object, Object> {
             for (int i = 0; i < md.statementList.size(); i++) {
                 if (md.statementList.get(i) instanceof ReturnStmt) {
                     if (( (ReturnStmt) (md.statementList.get(i)) ).returnExpr != null) {
-                        typeError("Return expression not allowed for method of type void");
+                        typeError("Return expression not allowed for method of type void", md.statementList.get(i).posn);
                     }
                 }
             }
@@ -88,20 +88,20 @@ public class TypeChecking implements Visitor<Object, Object> {
             for (int i = 0; i < md.statementList.size(); i++) {
                 if (md.statementList.get(i) instanceof ReturnStmt) {
                     if (((ReturnStmt) md.statementList.get(i)).returnExpr == null) {
-                        typeError("Missing return expression in non void method");
+                        typeError("Missing return expression in non void method", md.statementList.get(i).posn);
                         continue;
                     }
                     if ( ! (md.type.sameType( ( ( (ReturnStmt) (md.statementList.get(i)) ).returnExpr.typeAttribute ) ) ) ) {
-                        typeError("Return expression not the same type as non void method");
+                        typeError("Return expression not the same type as non void method", md.statementList.get(i).posn);
                     }
                 }
             }
             if (md.statementList.size() == 0) {
-                typeError("Missing return expression in non void method");
+                typeError("Missing return expression in non void method", md.posn);
                 return null;
             }
             if ( !(md.statementList.get(md.statementList.size() - 1) instanceof ReturnStmt) ) {
-                typeError("Last statement in method not a return statement");
+                typeError("Last statement in method not a return statement", md.posn);
             }
         }
         return null;
@@ -150,7 +150,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
         stmt.initExp.visit(this, null);
         if ( !( stmt.varDecl.type.sameType(stmt.initExp.typeAttribute) ) ) {
-            typeError("Expression does not match type of variable declaration");
+            typeError("Expression does not match type of variable declaration", stmt.posn);
         }
         return null;
     }
@@ -159,7 +159,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
         stmt.val.visit(this, null);
         if ( !( stmt.ref.decl.type.sameType(stmt.val.typeAttribute) ) ) {
-            typeError("Assigned expression does not match type of reference");
+            typeError("Assigned expression does not match type of reference", stmt.posn);
         }
         return null;
     }
@@ -168,37 +168,43 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitIxAssignStmt(IxAssignStmt stmt, Object arg) {
         stmt.ix.visit(this, null);
         if ( !(stmt.ix.typeAttribute.typeKind == TypeKind.INT || stmt.ix.typeAttribute.typeKind == TypeKind.ERROR) ) {
-            typeError("Size expression is not of type int in indexed array assignment statement");
-        }
-
-        if (stmt.ref.decl.type.typeKind != TypeKind.ARRAY) {
-            typeError("Reference is not of type array");
-            return null;
+            typeError("Size expression is not of type int in indexed array assignment statement", stmt.posn);
         }
 
         stmt.exp.visit(this, null);
 
+        if (stmt.ref.decl.type.typeKind != TypeKind.ARRAY) {
+            typeError("Reference is not of type array", stmt.posn);
+            return null;
+        }
+
         if ( !( ( (ArrayType) (stmt.ref.decl.type) ).eltType.sameType(stmt.exp.typeAttribute) ) ) {
-            typeError("Assigned expression does not match element type of array");
+            typeError("Assigned expression does not match element type of array", stmt.posn);
         }
         return null;
     }
 
     @Override
     public Object visitCallStmt(CallStmt stmt, Object arg) {
+
+        for (Expression expr : stmt.argList) {
+            expr.visit(this, null);
+        }
+
         if ( !(stmt.methodRef.decl instanceof MethodDecl) ) {
-            typeError("Reference is not a method");
+            typeError("Reference is not a method", stmt.posn);
             return null;
         }
         if (( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.size() != stmt.argList.size()) {
-            typeError("Size of argument list does not match size of argument list of referenced method");
+            typeError("Size of argument list does not match size of argument list of referenced method", stmt.posn);
+            return null;
         }
 
         // compare referenced method parameter types to passed in parameters
         for (int i = 0; i < ( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.size(); i++) {
             TypeDenoter paramType = ( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.get(i).type;
             if (!paramType.sameType(stmt.argList.get(i).typeAttribute)) {
-                typeError("CallExpr has different argument type than referenced method");
+                typeError("CallStmt has different argument type than referenced method", stmt.posn);
             }
         }
         return null;
@@ -216,7 +222,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitIfStmt(IfStmt stmt, Object arg) {
         stmt.cond.visit(this, null);
         if ( !(stmt.cond.typeAttribute.typeKind == TypeKind.BOOLEAN || stmt.cond.typeAttribute.typeKind == TypeKind.ERROR) ) {
-            typeError("Condition of if stmt is not of type boolean");
+            typeError("Condition of if stmt is not of type boolean", stmt.posn);
         }
         stmt.thenStmt.visit(this, null);
         if (stmt.elseStmt != null) {
@@ -229,7 +235,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     public Object visitWhileStmt(WhileStmt stmt, Object arg) {
         stmt.cond.visit(this, null);
         if ( !(stmt.cond.typeAttribute.typeKind == TypeKind.BOOLEAN || stmt.cond.typeAttribute.typeKind == TypeKind.ERROR) ) {
-            typeError("Condition of while statement is not of type boolean");
+            typeError("Condition of while statement is not of type boolean", stmt.posn);
         }
         stmt.body.visit(this, null);
         return null;
@@ -245,13 +251,15 @@ public class TypeChecking implements Visitor<Object, Object> {
             // logical negation can only be applied to booleans
             expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
             if ( !(expr.expr.typeAttribute.typeKind == TypeKind.BOOLEAN || expr.expr.typeAttribute.typeKind == TypeKind.ERROR) ) {
-                typeError("'!' (NOT) applied to non boolean expression");
+                typeError("'!' (NOT) applied to non boolean expression", expr.posn);
+                expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
             }
         } else if (expr.operator.kind == Token.TokenKind.MINUS) {
             // arithmetic negation can only be applied to integers
             expr.typeAttribute = new BaseType(TypeKind.INT, null);
             if ( !(expr.expr.typeAttribute.typeKind == TypeKind.INT || expr.expr.typeAttribute.typeKind == TypeKind.ERROR) ) {
-                typeError("'-' (MINUS) applied to non integer expression");
+                typeError("'-' (MINUS) applied to non integer expression", expr.posn);
+                expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
             }
         }
         return null;
@@ -263,8 +271,11 @@ public class TypeChecking implements Visitor<Object, Object> {
         expr.left.visit(this, null);
         expr.right.visit(this, null);
         if (!expr.left.typeAttribute.sameType(expr.right.typeAttribute)) {
-            typeError("Unequal types on either side of binary expression");
+            typeError("Unequal types on either side of binary expression", expr.posn);
+            expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
+            return null;
         }
+
         switch (expr.operator.kind) {
 
             // strictly numerical operators
@@ -275,7 +286,7 @@ public class TypeChecking implements Visitor<Object, Object> {
             case GREATEREQUAL:
                 expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
                 if ( !(expr.left.typeAttribute.typeKind == TypeKind.INT || expr.left.typeAttribute.typeKind == TypeKind.ERROR) ) {
-                    typeError("Non integer used with relational integer operator");
+                    typeError("Non integer used with relational integer operator", expr.posn);
                 }
                 break;
                 // arithmetic operators return an int and only operate on ints
@@ -285,7 +296,7 @@ public class TypeChecking implements Visitor<Object, Object> {
             case DIV:
                 expr.typeAttribute = new BaseType(TypeKind.INT, null);
                 if ( !(expr.left.typeAttribute.typeKind == TypeKind.INT || expr.left.typeAttribute.typeKind == TypeKind.ERROR) ) {
-                    typeError("Non integer used with arithmetic integer operator");
+                    typeError("Non integer used with arithmetic integer operator", expr.posn);
                 }
                 break;
 
@@ -294,13 +305,14 @@ public class TypeChecking implements Visitor<Object, Object> {
             case OR:
                 expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
                 if ( !(expr.left.typeAttribute.typeKind == TypeKind.BOOLEAN || expr.left.typeAttribute.typeKind == TypeKind.ERROR)) {
-                    typeError("Non boolean used with logical integer operator");
+                    typeError("Non boolean used with logical integer operator", expr.posn);
                 }
                 break;
 
                 // equality operators can operate on all types, type equality between sides checked above
             case EQUALS:
             case NOTEQUAL:
+                expr.typeAttribute = new BaseType(TypeKind.BOOLEAN, null);
                 break;
 
         }
@@ -313,19 +325,17 @@ public class TypeChecking implements Visitor<Object, Object> {
         return null;
     }
 
-    //TODO: look at all decl.types with crtl f and change the typeDenoter of a classdecl to something that is not null
-    // class decls have a null type
     @Override
     public Object visitIxExpr(IxExpr expr, Object arg) {
         if ( !(expr.ref.decl.type.typeKind == TypeKind.ARRAY || expr.ref.decl.type.typeKind == TypeKind.ERROR)) {
-            typeError("Reference is not of type array");
+            typeError("Reference is not of type array", expr.posn);
             expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
         } else {
             expr.typeAttribute = ( (ArrayType)(expr.ref.decl.type) ).eltType;
         }
         expr.ixExpr.visit(this, null);
         if ( !(expr.ixExpr.typeAttribute.typeKind == TypeKind.INT || expr.ixExpr.typeAttribute.typeKind == TypeKind.ERROR) ){
-            typeError("Size expression is not of type int in indexed array expression");
+            typeError("Size expression is not of type int in indexed array expression", expr.posn);
         }
         return null;
     }
@@ -333,8 +343,13 @@ public class TypeChecking implements Visitor<Object, Object> {
     @Override
     public Object visitCallExpr(CallExpr expr, Object arg) {
         expr.typeAttribute = expr.functionRef.decl.type;
+
+        for (Expression argument : expr.argList) {
+            argument.visit(this, null);
+        }
+
         if (((MethodDecl)(expr.functionRef.decl)).parameterDeclList.size() != expr.argList.size()) {
-            typeError("Size of argument list does not match size of argument list of referenced method");
+            typeError("Size of argument list does not match size of argument list of referenced method", expr.posn);
             expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
             return null;
         }
@@ -343,8 +358,8 @@ public class TypeChecking implements Visitor<Object, Object> {
         for (int i = 0; i < ((MethodDecl)(expr.functionRef.decl)).parameterDeclList.size(); i++) {
             TypeDenoter paramType = ((MethodDecl)(expr.functionRef.decl)).parameterDeclList.get(i).type;
             if ( !(paramType.sameType(expr.argList.get(i).typeAttribute)) ) {
-                typeError("CallExpr has different argument type than referenced method");
-
+                typeError("CallExpr has different argument type than referenced method", expr.posn);
+                expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
             }
         }
         return null;
@@ -373,14 +388,12 @@ public class TypeChecking implements Visitor<Object, Object> {
         return null;
     }
 
-    // TODO: fix
     @Override
     public Object visitNewArrayExpr(NewArrayExpr expr, Object arg) {
         expr.typeAttribute = new ArrayType(expr.eltType, null);
         expr.sizeExpr.visit(this, null);
         if ( !(expr.sizeExpr.typeAttribute.typeKind == TypeKind.INT || expr.sizeExpr.typeAttribute.typeKind == TypeKind.ERROR) ){
-            typeError("Size expression is not of type int in new array expression");
-            expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
+            typeError("Size expression is not of type int in new array expression", expr.posn);
         }
         return null;
     }

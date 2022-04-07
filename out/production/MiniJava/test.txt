@@ -1,55 +1,271 @@
-
-// PA2 fail indexed ref
-class A {
-    void p(){
-        A x = B;
-    }
+class c1 {
+	static c2 a;
+	int f(int u) {
+		c1 a = c1;
+		c1 = c2;
+		f = g;
+		this = null;
+		c1 obj = c1;
+		obj = c1;
+		int y = 5;
+		int[] arr = null;
+		arr[5] = c1;
+		f(c1);
+		if (y[5] == 54) {}
+		if (54 == y[5]) {}
+		if (obj == y[5]) {}
+		//int ppp = y(5)==y(6);
+		if (arr[5] < 40) {}
+		if (y[6] < 40) {}
+		if (-y[6]) {}
+		//if (!y(5)) {}
+		if (c1 + 5) {}
+		arr[c1]=5;
+		c1[5]=5;
+		//return c2(3); // i feel like this can break somewhere
+		if (true) {
+			int v = 5;
+		}
+		obj = null;
+		arr[g()] = 53;
+		int j = true+4||(6-false);
+	}
+	// need to ensure all the param passing is working okay
+	boolean g(){return false;}
+	public void n() {
+		int c = 0;
+		int x = c[3];
+	}
+}
+class c2 {c3 b;}
+class c3 {int y;}
+class c4 {
+	void func(String[] args) {
+		int p = c1.a.b.y;
+		args= null;
+		int x = new int[50];
+		int[] y = new c4[5];
+		y[5] = p[56];
+		return p[6];
+		if (p[6]) {}
+		while (p[6]) {}
+		CCC.f3(p[6]);
+		//int o = CCC.yyy(p[7]);
+	}
+}
+class Foo {
+	int x;
+	int p(int y) {
+		if (p(x)) { int x = 10; x = y; }
+		return x;
+	}
+	private int nono() { return 5; }
 }
 
-class B {
-    void p() {
-    return;
-    }
+class CCC
+{
+	static int yyy;
+	Foo Foo;
+	void y(){}
+	int fx(CCC y) {
+		//int p = y.hello;
+		//Foo.nono();
+		if (this == null) {}
+	}
+	static void f3(Foo f) {
+		f.p(5);
+	}
+	void f(Foo Foo) {
+		//int Foo = 5;
+		Foo f = null;
+		this.Foo=Foo;
+		Foo=this.Foo;
+		{
+			int q=5;
+			{
+				int p = this.f();
+				//p[5] = 55;
+			}
+		}
+	}
+	CCC retx() { return null; }
+	int CCCfield1;
+}
+class Main
+{
+	public static void main ( String[] args )
+	{
+		System.out.println(0);
+	}
 }
 
+class SomeClass {
+	ClassB dd;
+	ClassC ee;
+	void someFunction(Getters g) {
+		int pppp = g.x;
+		//System s = new System(); // fail 15 16
+		//s.out.println(false); // fail 15 16
+		//System.out.println(false); // fail 15 16
+		int a = 55*23+4/true-3234<343-343+false;
+		int b = false || true; //shouold errr
+		int c = a+5;
+		boolean bool = false;
+		int d = bool/5;
+		boolean b1 = !(true||false||false&&true);
+		boolean b2 = -(50+a+b-d)/b1;
+		ClassB = 5+3; // BIG issue caught here
+		ClassB dd = this.dd;
+		ClassB de = ee;
+		ClassB xx = new ClassB();
+		ClassB xy = new ClassC();
+		ClassB[] j = new ClassC[de];
+		ClassB[] k = new int[5];
+		ClassB[] l = xx;
+		ClassC[] m = j;
+		int[] o = j;
+	}
 
+	void testIfStatements() {
+		if (5) {} else {}
+		// if (true)
+		// 	int x = 5;
+		// else
+		// 	int y = 5;
+		// if (5<3) {
+		// 	int o = 5;
+		// } else {
+		// 	int p = 5;
+		// }
+		if (false || true) { int m = 5; m = false;} // assignment should err
+	}
 
+	void testWhileStatements() {
+		int x = 5;
+		boolean b = true;
+		while (x) {}
+		while (b) { x = x+5; }
+		while (b) { int q = 6; }
+		{
+			int u = false;
+		}
+	}
 
+	boolean kk;
+	boolean testIdentification(int kk) { return this.kk || false; }
+	int testIdentification2(int kk) { return kk+5; }
 
-/*
-class A {
-    static B b;
+	int cannotReturnAMethod() { return this.f2; return f2; }
+	SomeClass getCurrentClass() { return this; }
+	ClassA invalid() { return this; }
+
+	void f1() { return 5; }
+	int f2() { return false; }
+	ClassA f3() { return new ClassA(); }
+	ClassA f4() { return new ClassB(); }
+	ClassA f5() { return 5; return false; }
+	ClassB f6() { return; }
+	ClassB f7() { return ClassB; }
+	ClassA[] f8() { return new ClassA[5]; }
+	ClassA[] f9() { return new ClassB[5]; }
+	int[] f10() { return new ClassA[5]; }
+	int[] f11() { return new int[5]; }
+	ClassA[] f12() { return new int[5]; }
+
+	// Test Method Calls
+	void testMethodCalls() {
+		boolean a = Getters.getInt();
+		boolean b = Getters.getBool();
+		ClassA[] c = this.f12();
+		ClassB[] d = this.f12();
+		ClassA pop = c[c];
+		ClassA pop2 = this.f12[55];
+		ClassA pop3 = ClassA[5];
+		ClassA pop4 = c[Getters.getBool()];
+		ClassA pop5 = c[Getters.getInt()];
+		ClassA pop6 = c[this];
+		ClassA pop7 = this[5];
+		ClassB pop8 = a[55];
+		int[] temp = new int[100];
+		int y = temp[false]+4;
+		int yy = c[55]+5;
+		int e = f1();
+		int f = f2();
+		int g = f7();
+		ClassA h = f5();
+		ClassA i = f6();
+		int yyy = testIdentification2(5,5,5,5);
+		int o = this.manyParamFunc(
+				a,
+				e,
+				Getters, // Cannot ever use a class name
+				new ClassB(),
+				new ClassB(),
+				d, // Array of wrong element type
+				d,
+				this,
+				this.testMethodCalls(), // cannot pass in void
+				this.testMethodCalls // cannot pass a function itself
+				);
+		this.manyParamFunc(
+				a,
+				e,
+				Getters, // Cannot ever use a class name
+				new ClassB(),
+				new ClassB(),
+				d, // Array of wrong element type
+				d,
+				this,
+				this.testMethodCalls(), // cannot pass in void
+				this.testMethodCalls // cannot pass a function itself
+				);
+		Getters.doubleValue(Getters.getBool());
+		Getters.doubleValue(Getters.doubleValue(Getters.doubleValue(false)));
+		int hhh = Getters.getNone()+5;
+
+		// Test Assign Statements
+		this = null;
+		this.manyParamFunc = 55;
+		Getters = new Getters();
+		this.dd = new ClassB();
+		this.dd = new ClassA();
+		this.dd = Getters.getNone();
+		dd = Getters.getBool(); // Cannot assign bool to class type
+		this.dd = this.dd; // valid but has no effect
+		this.kk = Getters.getBool();
+		int x = 5;
+		x = x+x-5*x;
+		x = 5 < 5; // cannot assign bool to int
+		int[] iarr = new int[20];
+		ClassA[] carr = new ClassA[20];
+		iarr[0] = false;
+		iarr[false] = 0;
+		iarr[5] = iarr[4]+iarr[3];
+		iarr[5]=carr[5];
+		carr[0] = new ClassA[5];
+		carr[1] = new ClassA();
+		carr[4] = null;
+		Getters.takeObject(null);
+		ClassA nca = null;
+		nca = null;
+		carr = null;
+		carr[5] = null;
+		ClassA[] ncaa = null;
+	}
+	int manyParamFunc(int a, boolean b, Getters g, ClassA r, ClassB cb, ClassA[] x, ClassB[] y, SomeClass q, ClassC pp, ClassC ppp) { return 5; }
+	static int xxx;
 }
-
-class B {
-    C c;
+class Getters {
+	int nonstatic;
+	private static int psi;
+	public  static int x;
+	public static void takeObject(ClassA a) {}
+	public static void getNone() {}
+	public static boolean getBool() { return  true; }
+	public static int getInt() { return 5; }
+	public static ClassB getObject() { return  new ClassB(); }
+	public static int doubleValue(int val) { return 2*val; }
 }
-
-class C {
-    int x;
-}
-
-class Test {
-
-    A a;
-    static int method() {
-        A.b.c.x = null;
-        return A.b.c;
-    }
-}
-*/
-
-/*
-class Test {
-
-    void p(T t) {
-        T[] testArr = new T[7];
-        testArr[1] = new T();
-        T x = testArr[3];
-    }
-}
-
-class T {
-    int x;
-}
-*/
+class ClassB{}
+class ClassC{}
+class ClassA{}
