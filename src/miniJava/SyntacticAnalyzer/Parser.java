@@ -9,7 +9,7 @@ public class Parser {
     private Scanner scanner;
     private ErrorReporter reporter;
     private Token token;
-    private boolean trace = true;
+    private boolean trace = false;
 
     public Parser(Scanner scanner, ErrorReporter reporter) {
         this.scanner = scanner;

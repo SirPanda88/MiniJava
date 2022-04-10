@@ -6,6 +6,8 @@ import miniJava.ErrorReporter;
 import miniJava.SyntacticAnalyzer.SourcePosition;
 import miniJava.SyntacticAnalyzer.Token;
 
+import java.sql.Ref;
+
 public class Identification implements Visitor<Object, Object> {
 
     public IdTable table;
@@ -441,6 +443,21 @@ public class Identification implements Visitor<Object, Object> {
         if (arg == null) {
             idError("Should never reach a call to visitIdentifier with null arg", id.posn);
         }
+        if ( !(arg instanceof Reference) ) {
+            idError("Dot operator cannot be called on non reference", id.posn);
+        }
+        // TODO: ensure length property can only be read and not written
+        // if the id of a reference to an array is in fact length, have its decl.type.typekind be int
+        assert arg != null;
+        assert arg instanceof Reference;
+        if (((Reference) arg).decl.type.typeKind == TypeKind.ARRAY) {
+            if (!id.spelling.equals("length")) {
+                idError("Cannot access a field of an array which is not length", id.posn);
+            }
+            id.decl = new FieldDecl(false, false, new BaseType(TypeKind.INT, id.posn), "length", id.posn);
+            id.decl.isArrayLength = true;
+            return null;
+        }
 
         if (arg instanceof ThisRef) {
             // QualRef calling visitIdentifier method looks like this.id
@@ -642,7 +659,7 @@ public class Identification implements Visitor<Object, Object> {
             idError("Identifier not found in referenced class for QualRef.ID QualRef", id.posn);
         }
 
-        idError("Should never reach a call to visitIdentifier with non reference arg", id.posn);
+        idError("Should never reach this point", id.posn);
         return null;
 
 //        Declaration originalDecl = table.search(id.spelling);

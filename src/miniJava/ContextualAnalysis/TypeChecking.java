@@ -29,7 +29,6 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     // Check type equality while catching any possible errors
     public void typeCheck() {
-        ast.visit(this, null);
         try {
             ast.visit(this, null);
         }
@@ -58,7 +57,7 @@ public class TypeChecking implements Visitor<Object, Object> {
     @Override
     public Object visitClassDecl(ClassDecl cd, Object arg) {
 
-        // visit all member, no types to check in FieldDecls so just visit all MethodDecls
+        // visit all members, no types to check in FieldDecls so just visit all MethodDecls
         for(MethodDecl md: cd.methodDeclList) {
             md.visit(this, null);
         }
@@ -155,8 +154,15 @@ public class TypeChecking implements Visitor<Object, Object> {
         return null;
     }
 
+    // todo: find places where method refs and class refs are illegal for both typechecking and identification
     @Override
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
+        if (stmt.ref instanceof QualRef) {
+            QualRef qualRef = (QualRef) stmt.ref;
+            if (qualRef.id.decl.isArrayLength) {
+                typeError("Assignment to array length is illegal", stmt.posn);
+            }
+        }
         stmt.val.visit(this, null);
         if ( !( stmt.ref.decl.type.sameType(stmt.val.typeAttribute) ) ) {
             typeError("Assigned expression does not match type of reference", stmt.posn);
