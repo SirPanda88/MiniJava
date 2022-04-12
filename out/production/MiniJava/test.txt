@@ -1,28 +1,60 @@
-class B {
- 	static boolean x;
-C c;
+class TestLengthPass {
+    private int[] intArray;
+    private TestClass[] classArray;
+    private TestClass length;
 
- 	int method1(B[] y) {
- 		int x = false;
- 		return x;
- 	}
+    public void test(int[] paramIntArray, TestClass[] paramClassArray) {
+        int x = intArray.length;
+        x = this.intArray.length;
+        x = classArray.length;
+        x = this.classArray.length;
 
- 	static int method2(int[] y) {
- 		int x = 5;
- 		return x;
-	}
+        x = paramIntArray.length;
+        x = paramClassArray.length;
 
- 	static int method3(int[] y) {
- 		int x = 5;
- 		return x;
- 	}
+        x = TestClass.intArray1.length;
+        x = TestClass.classArray1.length;
 
- 	static int method4(int[] y, int y2, boolean y3) {
- 		int x = 5;
- 		return x;
- 	}
+        x = TestClass.tC1.intArray2.length;
+
+        TestClass tCInstance = new TestClass();
+        TestClass1 tCInstance1 = new TestClass1();
+
+        x = tCInstance.intArray1.length;
+        x = tCInstance.classArray1.length;
+
+        intArray = new int[intArray.length];
+        classArray = new TestClass[classArray.length];
+
+        intArray[tCInstance.tC1.intArray2.length] = TestClass1.intArray2[x];
+
+        int y = x * tCInstance.tC1.intArray2.length * 4 / TestClass.tC1.intArray2.length;
+
+        TestClass z = this.length;
+        tCInstance1 = z.length;
+        tCInstance1 = TestClass.length;
+
+        y = TestClass1.length.length;
+        y = TestClass.length.length.length;
+        y = this.length.length.length.length;
+
+        int[] length = this.length.length.length;
+        y = length.length;
+
+        length[length.length] = this.length.length.length[this.length.length.length.length];
+
+
+    }
 }
 
-class C {
+class TestClass {
+    public static int[] intArray1;
+    public static TestClass1[] classArray1;
+    public static TestClass1 tC1;
+    public static TestClass1 length;
+}
 
+class TestClass1 {
+    public static int[] intArray2;
+public static int[] length;
 }

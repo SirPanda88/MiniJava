@@ -234,6 +234,10 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
+    // TODO: fix test fail340
+    // int x in higher scope
+    // int x = x + 2;
+    // should fail bc compiler should reference right x to left x instead of higher x
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
         // check if left hand declaration exists already to prevent double errors
@@ -307,6 +311,9 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitWhileStmt(WhileStmt stmt, Object arg) {
         stmt.cond.visit(this, null);
         table.openScope();
+        if (stmt.body instanceof VarDeclStmt) {
+            idError("Solitary variable declaration in THEN branch of if statement", stmt.body.posn);
+        }
         stmt.body.visit(this, null);
         table.closeScope();
         return null;
@@ -398,11 +405,17 @@ public class Identification implements Visitor<Object, Object> {
 
     // References
 
+    // tODO: make sure decl of thisRef is a valid type instead of ActualClass
     @Override
     public Object visitThisRef(ThisRef ref, Object arg) {
+        if (withinStaticMethod) {
+            idError("Cannot reference this within a static method", ref.posn);
+        }
         ref.decl = currentClass;
         return null;
     }
+
+    //TODO: fix fail351 for method references
 
     @Override
     public Object visitIdRef(IdRef ref, Object arg) {
@@ -424,9 +437,13 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
+    // TODO: fix pass 321
     @Override
     public Object visitQRef(QualRef ref, Object arg) {
         ref.ref.visit(this, null);
+        if (ref.ref.decl instanceof MethodDecl) {
+            idError("Method reference not allowed within qualRef chain", ref.posn);
+        }
         ref.id.visit(this, ref.ref);
         ref.decl = ref.id.decl;
         return null;
@@ -446,8 +463,6 @@ public class Identification implements Visitor<Object, Object> {
         if ( !(arg instanceof Reference) ) {
             idError("Dot operator cannot be called on non reference", id.posn);
         }
-        // TODO: ensure length property can only be read and not written
-        // if the id of a reference to an array is in fact length, have its decl.type.typekind be int
         assert arg != null;
         assert arg instanceof Reference;
         if (((Reference) arg).decl.type.typeKind == TypeKind.ARRAY) {
