@@ -15,12 +15,14 @@ public class Identification implements Visitor<Object, Object> {
     private ClassDecl currentClass;
     private boolean withinStaticMethod;
     private AST ast;
+    private boolean foundMain;
 
     public Identification(AST ast, ErrorReporter reporter) {
         this.reporter = reporter;
         table = new IdTable(reporter);
         this.ast = ast;
         withinStaticMethod = false;
+        foundMain = false;
 
         //attempt to add predefined classes
 //        Token classname = new Token(Token.TokenKind.ID, "System", null);
@@ -112,7 +114,7 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitClassDecl(ClassDecl cd, Object arg) {
-        // set current class so this keyword works
+        // set current class so "this" keyword works
         currentClass = cd;
 
         // add members so all fields and methods are visible
@@ -153,6 +155,38 @@ public class Identification implements Visitor<Object, Object> {
     @Override
     public Object visitMethodDecl(MethodDecl md, Object arg) {
         md.type.visit(this, null);
+
+        // TODO: issue error and terminate via exit code 4 if main conditions are not met
+        // check for unique "private static main (String[] args)" method
+        if (md.name.equals("main")) {
+            if (foundMain) {
+                idError("Duplicate main declaration", md.posn);
+            }
+
+            foundMain = true;
+
+            if (md.isPrivate) {
+                idError("Private main method", md.posn);
+            }
+
+            if ( !(md.isStatic) ) {
+                idError("Non static main method", md.posn);
+            }
+
+            if (md.parameterDeclList.size() != 1) {
+                idError("Main method does not have single parameter", md.posn);
+            }
+
+            if (md.parameterDeclList.get(0).type.typeKind != TypeKind.ARRAY) {
+                idError("Main method does not have an array parameter", md.posn);
+            }
+
+            ArrayType arrayType = (ArrayType) md.parameterDeclList.get(0).type;
+
+            if ( !(arrayType.eltType.sameType(table.searchClasses("String").type)) ) {
+                idError("Main method's array parameter's element type is not of type String", md.posn);
+            }
+        }
 
         // let method body know the access modifier of the method by setting withinStaticMethod flag
         withinStaticMethod = md.isStatic;
@@ -206,7 +240,6 @@ public class Identification implements Visitor<Object, Object> {
         Declaration originalDecl = table.searchClasses(classTypeName.spelling);
         if (originalDecl == null) {
             idError("Undeclared class type", type.posn);
-            return null;
         }
 //        if (table.scopeLevel(classTypeName.spelling) > 0) {
 //            idError("New called on non class identifier in new object expr");
@@ -356,9 +389,6 @@ public class Identification implements Visitor<Object, Object> {
         for (Expression e: expr.argList) {
             e.visit(this, null);
         }
-        if (!(expr.functionRef.decl instanceof MethodDecl)) {
-            idError("Method call in expression must point to method declaration", expr.functionRef.posn);
-        }
         return null;
     }
 
@@ -374,7 +404,6 @@ public class Identification implements Visitor<Object, Object> {
         Declaration originalDecl = table.searchClasses(newClassName.spelling);
         if (originalDecl == null) {
             idError("Undeclared identifier after 'new' (not a class) in new object expr", expr.posn);
-            return null;
         }
 //        if (table.scopeLevel(newClassName.spelling) > 0) {
 //            idError("New called on non class identifier in new object expr");
@@ -391,7 +420,6 @@ public class Identification implements Visitor<Object, Object> {
             ClassDecl originalDecl = (ClassDecl) table.searchClasses(arrTypeName.spelling);
             if (originalDecl == null) {
                 idError("Undeclared class identifier after 'new' in new array expr", expr.posn);
-                return null;
             }
 //            if (table.scopeLevel(arrTypeName.spelling) > 0) {
 //                idError("New called on non class identifier in new array expr");
@@ -423,7 +451,6 @@ public class Identification implements Visitor<Object, Object> {
         Declaration originalDecl = table.search(ref.id.spelling);
         if (originalDecl == null) {
             idError("Undeclared identifier", ref.posn);
-            return null;
         }
 
         // if declaration is a member decl check static access
@@ -553,7 +580,6 @@ public class Identification implements Visitor<Object, Object> {
                 ClassDecl classDecl = (ClassDecl) table.searchClasses(className);
                 if (classDecl == null) {
                     idError("Undeclared class identifier for memberDecl of IdRef in QualRef", idRef.posn);
-                    return null;
                 }
 
                 // search class members for id

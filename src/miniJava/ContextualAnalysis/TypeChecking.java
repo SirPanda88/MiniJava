@@ -199,19 +199,22 @@ public class TypeChecking implements Visitor<Object, Object> {
         }
 
         if ( !(stmt.methodRef.decl instanceof MethodDecl) ) {
-            typeError("Reference is not a method", stmt.posn);
+            typeError("Method call in statement must point to method declaration", stmt.posn);
             return null;
         }
-        if (( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.size() != stmt.argList.size()) {
+
+        MethodDecl methodDecl = (MethodDecl) stmt.methodRef.decl;
+        if ( methodDecl.parameterDeclList.size() != stmt.argList.size() ) {
             typeError("Size of argument list does not match size of argument list of referenced method", stmt.posn);
             return null;
         }
 
         // compare referenced method parameter types to passed in parameters
-        for (int i = 0; i < ( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.size(); i++) {
-            TypeDenoter paramType = ( (MethodDecl) (stmt.methodRef.decl) ).parameterDeclList.get(i).type;
+        for (int i = 0; i < methodDecl.parameterDeclList.size(); i++) {
+            TypeDenoter paramType = methodDecl.parameterDeclList.get(i).type;
             if (!paramType.sameType(stmt.argList.get(i).typeAttribute)) {
                 typeError("CallStmt has different argument type than referenced method", stmt.posn);
+                return null;
             }
         }
         return null;
@@ -349,24 +352,32 @@ public class TypeChecking implements Visitor<Object, Object> {
 
     @Override
     public Object visitCallExpr(CallExpr expr, Object arg) {
-        expr.typeAttribute = expr.functionRef.decl.type;
 
         for (Expression argument : expr.argList) {
             argument.visit(this, null);
         }
 
-        if (((MethodDecl)(expr.functionRef.decl)).parameterDeclList.size() != expr.argList.size()) {
+        if (!(expr.functionRef.decl instanceof MethodDecl)) {
+            typeError("Method call in expression must point to method declaration", expr.functionRef.posn);
+            expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
+            return null;
+        }
+
+        MethodDecl methodDecl = (MethodDecl) expr.functionRef.decl;
+
+        if ( methodDecl.parameterDeclList.size() != expr.argList.size() ) {
             typeError("Size of argument list does not match size of argument list of referenced method", expr.posn);
             expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
             return null;
         }
 
         // compare referenced method parameter types to passed in parameters
-        for (int i = 0; i < ((MethodDecl)(expr.functionRef.decl)).parameterDeclList.size(); i++) {
-            TypeDenoter paramType = ((MethodDecl)(expr.functionRef.decl)).parameterDeclList.get(i).type;
+        for (int i = 0; i < methodDecl.parameterDeclList.size(); i++) {
+            TypeDenoter paramType = methodDecl.parameterDeclList.get(i).type;
             if ( !(paramType.sameType(expr.argList.get(i).typeAttribute)) ) {
                 typeError("CallExpr has different argument type than referenced method", expr.posn);
                 expr.typeAttribute = new BaseType(TypeKind.ERROR, null);
+                return null;
             }
         }
         return null;

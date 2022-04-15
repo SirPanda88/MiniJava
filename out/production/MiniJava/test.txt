@@ -4,6 +4,7 @@ class TestLengthPass {
     private TestClass length;
 
     public void test(int[] paramIntArray, TestClass[] paramClassArray) {
+    intArray.length = 5;
         int x = intArray.length;
         x = this.intArray.length;
         x = classArray.length;
