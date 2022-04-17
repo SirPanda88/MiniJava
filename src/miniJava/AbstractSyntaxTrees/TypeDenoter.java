@@ -32,6 +32,11 @@ abstract public class TypeDenoter extends AST {
             }
             return other.typeKind == TypeKind.NULL;
         }
+//        if (typeKind == TypeKind.ACTUALCLASS) {
+//            if (other.typeKind == TypeKind.ACTUALCLASS) {
+//
+//            }
+//        }
         if (this.typeKind == TypeKind.ARRAY) {
             if (other.typeKind == TypeKind.ARRAY) {
                 if ( ( ( (ArrayType) (this) ).eltType.typeKind == TypeKind.CLASS ) && ( ( (ArrayType) (other) ).eltType.typeKind == TypeKind.CLASS ) ) {

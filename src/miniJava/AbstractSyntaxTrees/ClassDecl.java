@@ -6,11 +6,12 @@
 package miniJava.AbstractSyntaxTrees;
 
 import miniJava.SyntacticAnalyzer.SourcePosition;
+import miniJava.SyntacticAnalyzer.Token;
 
 public class ClassDecl extends Declaration {
 
   public ClassDecl(String cn, FieldDeclList fdl, MethodDeclList mdl, SourcePosition posn) {
-	  super(cn, new BaseType(TypeKind.ACTUALCLASS, null), posn);
+	  super(cn, new ClassType(new Identifier(new Token(Token.TokenKind.ID, cn, null)), null), posn);
 	  if (cn.equals("String")) {
 	      this.type = new BaseType(TypeKind.UNSUPPORTED, null);
       }

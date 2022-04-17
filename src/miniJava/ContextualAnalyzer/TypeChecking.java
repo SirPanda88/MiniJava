@@ -35,9 +35,9 @@ public class TypeChecking implements Visitor<Object, Object> {
         catch (TypeChecking.TypeError e) {
 
         }
-        catch (Exception e) {
-            reporter.reportError("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
-        }
+//        catch (Exception e) {
+//            reporter.reportError("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
+//        }
     }
 
 
@@ -69,7 +69,6 @@ public class TypeChecking implements Visitor<Object, Object> {
         return null;
     }
 
-    // TODO: fix pass 337 (return this)
     @Override
     public Object visitMethodDecl(MethodDecl md, Object arg) {
         for (Statement st : md.statementList) {
@@ -87,11 +86,14 @@ public class TypeChecking implements Visitor<Object, Object> {
         } else {
             for (int i = 0; i < md.statementList.size(); i++) {
                 if (md.statementList.get(i) instanceof ReturnStmt) {
-                    if (((ReturnStmt) md.statementList.get(i)).returnExpr == null) {
+                    ReturnStmt returnStmt = (ReturnStmt) md.statementList.get(i);
+                    if (returnStmt.returnExpr == null) {
                         typeError("Missing return expression in non void method", md.statementList.get(i).posn);
                         continue;
                     }
-                    if ( ! (md.type.sameType( ( ( (ReturnStmt) (md.statementList.get(i)) ).returnExpr.typeAttribute ) ) ) ) {
+                    if ( ! (md.type.sameType( (returnStmt.returnExpr.typeAttribute) ) ) ) {
+                        System.out.println(md.type.typeKind);
+                        System.out.println(returnStmt.returnExpr.typeAttribute.typeKind);
                         typeError("Return expression not the same type as non void method", md.statementList.get(i).posn);
                     }
                 }
@@ -106,6 +108,9 @@ public class TypeChecking implements Visitor<Object, Object> {
         }
         return null;
     }
+    // todo: what are the implications of assigning classdecls a type of classtype
+    // TODO: they can be compared with instances of classes and it will return true
+    // make sure they do not show up anywhere they shouldnt instead of relying on sametype method to catch that
 
     @Override
     public Object visitParameterDecl(ParameterDecl pd, Object arg) {
@@ -149,13 +154,25 @@ public class TypeChecking implements Visitor<Object, Object> {
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
         stmt.initExp.visit(this, null);
+
+        // initExp cannot point to a declaration of either class or method
+        if (stmt.initExp instanceof RefExpr) {
+            RefExpr refExpr = (RefExpr) stmt.initExp;
+            if (refExpr.ref.decl instanceof ClassDecl) {
+                typeError("Illegal assignment of class to variable declaration", stmt.posn);
+            }
+
+            if (refExpr.ref.decl instanceof MethodDecl) {
+                typeError("Illegal assignment of method to variable declaration", stmt.posn);
+            }
+        }
+
         if ( !( stmt.varDecl.type.sameType(stmt.initExp.typeAttribute) ) ) {
             typeError("Expression does not match type of variable declaration", stmt.posn);
         }
         return null;
     }
 
-    // todo: find places where method refs and class refs are illegal for both typechecking and identification
     @Override
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
         if (stmt.ref instanceof QualRef) {
@@ -164,7 +181,24 @@ public class TypeChecking implements Visitor<Object, Object> {
                 typeError("Assignment to array length is illegal", stmt.posn);
             }
         }
+
+        if (stmt.ref.decl instanceof ClassDecl) {
+            typeError("Illegal assignment to class reference", stmt.posn);
+        }
+        if (stmt.ref.decl instanceof MethodDecl) {
+            typeError("Illegal assignment to method reference", stmt.posn);
+        }
+
         stmt.val.visit(this, null);
+
+        // Value of assignStmt (expression) cannot point to a method declaration
+        if (stmt.val instanceof RefExpr) {
+            RefExpr refExpr = (RefExpr) stmt.val;
+            if (refExpr.ref.decl instanceof MethodDecl) {
+                typeError("Illegal assignment of method", stmt.posn);
+            }
+        }
+
         if ( !( stmt.ref.decl.type.sameType(stmt.val.typeAttribute) ) ) {
             typeError("Assigned expression does not match type of reference", stmt.posn);
         }
@@ -179,6 +213,13 @@ public class TypeChecking implements Visitor<Object, Object> {
         }
 
         stmt.exp.visit(this, null);
+
+//        if (stmt.ref.decl instanceof ClassDecl) {
+//            typeError("Illegal index into class reference", stmt.posn);
+//        }
+        if (stmt.ref.decl instanceof MethodDecl) {
+            typeError("Illegal index into method reference", stmt.posn);
+        }
 
         if (stmt.ref.decl.type.typeKind != TypeKind.ARRAY) {
             typeError("Reference is not of type array", stmt.posn);
@@ -380,6 +421,8 @@ public class TypeChecking implements Visitor<Object, Object> {
                 return null;
             }
         }
+
+        expr.typeAttribute = expr.functionRef.decl.type;
         return null;
     }
 

@@ -167,21 +167,19 @@ public class Identification implements Visitor<Object, Object> {
                     ClassType classType = (ClassType) arrayType.eltType;
 
                     if ( classType.className.spelling.equals("String") ) {
-                        idError("Main method's array parameter's element type is not of type String", md.posn);
-                    }
+                        if (foundMain) {
+                            idError("Duplicate main declaration in package", md.posn);
+                        }
 
-                    if (foundMain) {
-                        idError("Duplicate main declaration in package", md.posn);
-                    }
+                        foundMain = true;
 
-                    foundMain = true;
+                        if (md.isPrivate) {
+                            idError("Private main method", md.posn);
+                        }
 
-                    if (md.isPrivate) {
-                        idError("Private main method", md.posn);
-                    }
-
-                    if ( !(md.isStatic) ) {
-                        idError("Non static main method", md.posn);
+                        if ( !(md.isStatic) ) {
+                            idError("Non static main method", md.posn);
+                        }
                     }
                 }
             }
@@ -438,7 +436,6 @@ public class Identification implements Visitor<Object, Object> {
 
     // References
 
-    // tODO: make sure decl of thisRef is a valid type instead of ActualClass
     @Override
     public Object visitThisRef(ThisRef ref, Object arg) {
         if (withinStaticMethod) {
@@ -448,13 +445,11 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
-    //TODO: fix fail351 for method references
-
     @Override
     public Object visitIdRef(IdRef ref, Object arg) {
         // if right hand expression of variable declaration contains name of variable throw idError
         if (ref.id.spelling.equals(this.declaredVariable)) {
-            idError("Illegal use of the declared variable in the initializing expression", ref.posn);
+            idError("Illegal use of a declared variable in its initializing expression", ref.posn);
         }
 
         // decorate id of ref
@@ -474,7 +469,6 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
-    // TODO: fix pass 321
     @Override
     public Object visitQRef(QualRef ref, Object arg) {
         ref.ref.visit(this, null);
@@ -503,7 +497,7 @@ public class Identification implements Visitor<Object, Object> {
 
         // if right hand expression of variable declaration contains name of variable throw idError
         if (id.spelling.equals(this.declaredVariable)) {
-            idError("Illegal use of the declared variable in the initializing expression", id.posn);
+            idError("Illegal use of a declared variable in its initializing expression", id.posn);
         }
 
         assert arg != null;
@@ -547,8 +541,15 @@ public class Identification implements Visitor<Object, Object> {
             // check that first id's type is a class by checking its decl
             // check if identifier is a member of the class referenced by the first id's decl's type
 
+            // special case: first id's declaration points to the currentClass declaration
+            // (it is the same type as the current class)
+            // allow the second id to be private
+
             IdRef idRef = (IdRef) arg;
             String className;
+
+            // boolean to mark if first id's type is the same as current class
+            boolean isCurrentClass = false;
 
             if (idRef.decl instanceof LocalDecl) {
                 LocalDecl localDecl = (LocalDecl) idRef.decl;
@@ -561,13 +562,17 @@ public class Identification implements Visitor<Object, Object> {
                 ClassDecl classDecl = (ClassDecl) table.searchClasses(className);
                 if (classDecl == null) {
                     idError("Undeclared class identifier for localDecl of IdRef in QualRef", idRef.posn);
-                    return null;
+                }
+
+                // mark that first id's type is the same as current class
+                if (classDecl.name.equals(currentClass.name)) {
+                    isCurrentClass = true;
                 }
 
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {
                     if (id.spelling.equals(fd.name)) {
-                        if (fd.isPrivate) {
+                        if (fd.isPrivate && !isCurrentClass) {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         id.decl = fd;
@@ -576,7 +581,7 @@ public class Identification implements Visitor<Object, Object> {
                 }
                 for (MethodDecl md : classDecl.methodDeclList) {
                     if (id.spelling.equals(md.name)) {
-                        if (md.isPrivate) {
+                        if (md.isPrivate && !isCurrentClass) {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         id.decl = md;
@@ -601,7 +606,7 @@ public class Identification implements Visitor<Object, Object> {
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {
                     if (id.spelling.equals(fd.name)) {
-                        if (fd.isPrivate) {
+                        if (fd.isPrivate && !isCurrentClass) {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         id.decl = fd;
@@ -610,7 +615,7 @@ public class Identification implements Visitor<Object, Object> {
                 }
                 for (MethodDecl md : classDecl.methodDeclList) {
                     if (id.spelling.equals(md.name)) {
-                        if (md.isPrivate) {
+                        if (md.isPrivate && !isCurrentClass) {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         id.decl = md;
@@ -629,7 +634,7 @@ public class Identification implements Visitor<Object, Object> {
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {
                     if (id.spelling.equals(fd.name)) {
-                        if (fd.isPrivate) {
+                        if (fd.isPrivate && !isCurrentClass) {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         if (!fd.isStatic) {
@@ -641,7 +646,7 @@ public class Identification implements Visitor<Object, Object> {
                 }
                 for (MethodDecl md : classDecl.methodDeclList) {
                     if (id.spelling.equals(md.name)) {
-                        if (md.isPrivate) {
+                        if (md.isPrivate && !isCurrentClass) {
                             idError("QualRef to a member of another class may not have private visibility", id.posn);
                         }
                         if (!md.isStatic) {
@@ -668,6 +673,9 @@ public class Identification implements Visitor<Object, Object> {
             QualRef qualRef = (QualRef) arg;
             String className;
 
+            // boolean to mark if first id's type is the same as current class
+            boolean isCurrentClass = false;
+
             if (!(qualRef.decl instanceof MemberDecl)) {
                 idError("Qualref of QualRef.id does not point to a MemberDecl", qualRef.posn);
             }
@@ -686,12 +694,17 @@ public class Identification implements Visitor<Object, Object> {
                 return null;
             }
 
+            // mark that first id's type is the same as current class
+            if (classDecl.name.equals(currentClass.name)) {
+                isCurrentClass = true;
+            }
+
             // search class members for id
             // check if identifier is a member of the class referenced by the first id's decl's type
             // check if identifier has both public and static access
             for (FieldDecl fd : classDecl.fieldDeclList) {
                 if (id.spelling.equals(fd.name)) {
-                    if (fd.isPrivate) {
+                    if (fd.isPrivate && !isCurrentClass) {
                         idError("QualRef to a member of another class may not have private visibility", id.posn);
                     }
 //                    if (!fd.isStatic) {
@@ -703,7 +716,7 @@ public class Identification implements Visitor<Object, Object> {
             }
             for (MethodDecl md : classDecl.methodDeclList) {
                 if (id.spelling.equals(md.name)) {
-                    if (md.isPrivate) {
+                    if (md.isPrivate && !isCurrentClass) {
                         idError("QualRef to a member of another class may not have private visibility", id.posn);
                     }
 //                    if (!md.isStatic) {
