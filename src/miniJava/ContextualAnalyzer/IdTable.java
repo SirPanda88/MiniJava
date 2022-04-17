@@ -1,4 +1,4 @@
-package miniJava.ContextualAnalysis;
+package miniJava.ContextualAnalyzer;
 
 import miniJava.AbstractSyntaxTrees.Declaration;
 import miniJava.ErrorReporter;

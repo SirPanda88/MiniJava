@@ -1,12 +1,10 @@
-package miniJava.ContextualAnalysis;
+package miniJava.ContextualAnalyzer;
 
 import miniJava.AbstractSyntaxTrees.*;
 import miniJava.AbstractSyntaxTrees.Package;
 import miniJava.ErrorReporter;
 import miniJava.SyntacticAnalyzer.SourcePosition;
 import miniJava.SyntacticAnalyzer.Token;
-
-import java.sql.Ref;
 
 public class Identification implements Visitor<Object, Object> {
 
@@ -16,13 +14,15 @@ public class Identification implements Visitor<Object, Object> {
     private boolean withinStaticMethod;
     private AST ast;
     private boolean foundMain;
+    private String declaredVariable;
 
     public Identification(AST ast, ErrorReporter reporter) {
         this.reporter = reporter;
-        table = new IdTable(reporter);
+        this.table = new IdTable(reporter);
         this.ast = ast;
-        withinStaticMethod = false;
-        foundMain = false;
+        this.withinStaticMethod = false;
+        this.foundMain = false;
+        this.declaredVariable = null;
 
         //attempt to add predefined classes
 //        Token classname = new Token(Token.TokenKind.ID, "System", null);
@@ -105,6 +105,10 @@ public class Identification implements Visitor<Object, Object> {
             cd.visit(this, null);
         }
 
+        if (!foundMain) {
+            idError("Main method not found", prog.posn);
+        }
+
         table.closeScope();
         return null;
     }
@@ -133,7 +137,6 @@ public class Identification implements Visitor<Object, Object> {
             idError(e.getMessage(), sp);
         }
 
-
         // visit all members
         for(FieldDecl fd: cd.fieldDeclList) {
             fd.visit(this, null);
@@ -156,35 +159,31 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitMethodDecl(MethodDecl md, Object arg) {
         md.type.visit(this, null);
 
-        // TODO: issue error and terminate via exit code 4 if main conditions are not met
         // check for unique "private static main (String[] args)" method
         if (md.name.equals("main")) {
-            if (foundMain) {
-                idError("Duplicate main declaration", md.posn);
-            }
+            if (md.parameterDeclList.size() == 1) {
+                if (md.parameterDeclList.get(0).type.typeKind == TypeKind.ARRAY) {
+                    ArrayType arrayType = (ArrayType) md.parameterDeclList.get(0).type;
+                    ClassType classType = (ClassType) arrayType.eltType;
 
-            foundMain = true;
+                    if ( classType.className.spelling.equals("String") ) {
+                        idError("Main method's array parameter's element type is not of type String", md.posn);
+                    }
 
-            if (md.isPrivate) {
-                idError("Private main method", md.posn);
-            }
+                    if (foundMain) {
+                        idError("Duplicate main declaration in package", md.posn);
+                    }
 
-            if ( !(md.isStatic) ) {
-                idError("Non static main method", md.posn);
-            }
+                    foundMain = true;
 
-            if (md.parameterDeclList.size() != 1) {
-                idError("Main method does not have single parameter", md.posn);
-            }
+                    if (md.isPrivate) {
+                        idError("Private main method", md.posn);
+                    }
 
-            if (md.parameterDeclList.get(0).type.typeKind != TypeKind.ARRAY) {
-                idError("Main method does not have an array parameter", md.posn);
-            }
-
-            ArrayType arrayType = (ArrayType) md.parameterDeclList.get(0).type;
-
-            if ( !(arrayType.eltType.sameType(table.searchClasses("String").type)) ) {
-                idError("Main method's array parameter's element type is not of type String", md.posn);
+                    if ( !(md.isStatic) ) {
+                        idError("Non static main method", md.posn);
+                    }
+                }
             }
         }
 
@@ -267,20 +266,26 @@ public class Identification implements Visitor<Object, Object> {
         return null;
     }
 
-    // TODO: fix test fail340
-    // int x in higher scope
-    // int x = x + 2;
-    // should fail bc compiler should reference right x to left x instead of higher x
     @Override
     public Object visitVardeclStmt(VarDeclStmt stmt, Object arg) {
+        // outdated old way, does not prevent following case
+
         // check if left hand declaration exists already to prevent double errors
         // visit right hand expression after checking if left exists
         // to prevent use of the declared variable in the initializing expression
         // then visit left
-        if (table.currentScope.containsKey(stmt.varDecl.name)) {
-            idError("Duplicate declaration (name already declared in current scope)", stmt.posn);
-        }
+
+        // int x in higher scope (field decl)
+        // int x = x + 2;
+        // should fail bc compiler should reference right x to left x instead of higher x
+
+        // new way is to check if the variable name on left shows up in the expression on right
+        // check for reference to left varDecl on all references on the right
+        // if forbidden variable shows up throw idError
+
+        this.declaredVariable = stmt.varDecl.name;
         stmt.initExp.visit(this, null);
+        this.declaredVariable = null;
         stmt.varDecl.visit(this, null);
         return null;
     }
@@ -447,7 +452,12 @@ public class Identification implements Visitor<Object, Object> {
 
     @Override
     public Object visitIdRef(IdRef ref, Object arg) {
-        // decorate ref.id
+        // if right hand expression of variable declaration contains name of variable throw idError
+        if (ref.id.spelling.equals(this.declaredVariable)) {
+            idError("Illegal use of the declared variable in the initializing expression", ref.posn);
+        }
+
+        // decorate id of ref
         Declaration originalDecl = table.search(ref.id.spelling);
         if (originalDecl == null) {
             idError("Undeclared identifier", ref.posn);
@@ -490,6 +500,12 @@ public class Identification implements Visitor<Object, Object> {
         if ( !(arg instanceof Reference) ) {
             idError("Dot operator cannot be called on non reference", id.posn);
         }
+
+        // if right hand expression of variable declaration contains name of variable throw idError
+        if (id.spelling.equals(this.declaredVariable)) {
+            idError("Illegal use of the declared variable in the initializing expression", id.posn);
+        }
+
         assert arg != null;
         assert arg instanceof Reference;
         if (((Reference) arg).decl.type.typeKind == TypeKind.ARRAY) {

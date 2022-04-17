@@ -1,12 +1,11 @@
 package miniJava;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
-import miniJava.ContextualAnalysis.Identification;
-import miniJava.ContextualAnalysis.TypeChecking;
+import miniJava.ContextualAnalyzer.Identification;
+import miniJava.ContextualAnalyzer.TypeChecking;
 import miniJava.SyntacticAnalyzer.Scanner;
 import miniJava.SyntacticAnalyzer.Parser;
 import miniJava.AbstractSyntaxTrees.*;
@@ -83,6 +82,9 @@ public class Compiler {
 //                }
 //            }
 //        }
+    }
+    public static void main (String args) {
+
     }
 }
 
