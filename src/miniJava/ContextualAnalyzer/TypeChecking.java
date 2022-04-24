@@ -35,9 +35,9 @@ public class TypeChecking implements Visitor<Object, Object> {
         catch (TypeChecking.TypeError e) {
 
         }
-//        catch (Exception e) {
-//            reporter.reportError("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
-//        }
+        catch (Exception e) {
+            reporter.reportError("Should not encounter exceptions in type checking. Exception message: " + e.getMessage());
+        }
     }
 
 
@@ -103,7 +103,7 @@ public class TypeChecking implements Visitor<Object, Object> {
                 return null;
             }
             if ( !(md.statementList.get(md.statementList.size() - 1) instanceof ReturnStmt) ) {
-                typeError("Last statement in method not a return statement", md.posn);
+                typeError("Last statement in non void method not a return statement", md.posn);
             }
         }
         return null;

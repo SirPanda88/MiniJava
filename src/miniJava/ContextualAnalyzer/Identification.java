@@ -13,7 +13,6 @@ public class Identification implements Visitor<Object, Object> {
     private ClassDecl currentClass;
     private boolean withinStaticMethod;
     private AST ast;
-    private boolean foundMain;
     private String declaredVariable;
 
     public Identification(AST ast, ErrorReporter reporter) {
@@ -21,7 +20,6 @@ public class Identification implements Visitor<Object, Object> {
         this.table = new IdTable(reporter);
         this.ast = ast;
         this.withinStaticMethod = false;
-        this.foundMain = false;
         this.declaredVariable = null;
 
         //attempt to add predefined classes
@@ -44,11 +42,18 @@ public class Identification implements Visitor<Object, Object> {
                 (Token.TokenKind.ID, "_PrintStream", null)), null), "out", null));
         ClassDecl system = new ClassDecl("System", fieldDeclListSystem, new MethodDeclList(), null);
 
+        // toggle isStaticFieldAccess within the declaration of System.out
+        system.fieldDeclList.get(0).isStaticFieldRef = true;
+
         MethodDeclList methodDeclListPrintSystem = new MethodDeclList();
         ParameterDeclList parameterDeclList = new ParameterDeclList();
         parameterDeclList.add(new ParameterDecl(new BaseType(TypeKind.INT, null), "n", null));
-        methodDeclListPrintSystem.add(new MethodDecl(new FieldDecl(false, false, new BaseType
-                (TypeKind.VOID, null), "println", null), parameterDeclList, new StatementList(), null));
+
+        MethodDecl printLnMethodDecl = new MethodDecl(new FieldDecl(false, false, new BaseType
+                (TypeKind.VOID, null), "println", null), parameterDeclList, new StatementList(), null);
+        methodDeclListPrintSystem.add(printLnMethodDecl);
+        printLnMethodDecl.isPrintLn = true;
+
         ClassDecl printStream = new ClassDecl("_PrintStream", new FieldDeclList(), methodDeclListPrintSystem, null);
 
         ClassDecl string = new ClassDecl("String", new FieldDeclList(), new MethodDeclList(), null);
@@ -77,9 +82,9 @@ public class Identification implements Visitor<Object, Object> {
         catch (Identification.IdentificationError e) {
 
         }
-        catch (Exception e) {
-            reporter.reportError("Should not encounter exceptions in identification. Exception message: " + e.getMessage());
-        }
+//        catch (Exception e) {
+//            reporter.reportError("Should not encounter exceptions in identification. Exception message: " + e.getMessage());
+//        }
     }
 
 
@@ -105,9 +110,6 @@ public class Identification implements Visitor<Object, Object> {
             cd.visit(this, null);
         }
 
-        if (!foundMain) {
-            idError("Main method not found", prog.posn);
-        }
 
         table.closeScope();
         return null;
@@ -160,30 +162,7 @@ public class Identification implements Visitor<Object, Object> {
         md.type.visit(this, null);
 
         // check for unique "private static main (String[] args)" method
-        if (md.name.equals("main")) {
-            if (md.parameterDeclList.size() == 1) {
-                if (md.parameterDeclList.get(0).type.typeKind == TypeKind.ARRAY) {
-                    ArrayType arrayType = (ArrayType) md.parameterDeclList.get(0).type;
-                    ClassType classType = (ClassType) arrayType.eltType;
 
-                    if ( classType.className.spelling.equals("String") ) {
-                        if (foundMain) {
-                            idError("Duplicate main declaration in package", md.posn);
-                        }
-
-                        foundMain = true;
-
-                        if (md.isPrivate) {
-                            idError("Private main method", md.posn);
-                        }
-
-                        if ( !(md.isStatic) ) {
-                            idError("Non static main method", md.posn);
-                        }
-                    }
-                }
-            }
-        }
 
         // let method body know the access modifier of the method by setting withinStaticMethod flag
         withinStaticMethod = md.isStatic;
@@ -292,6 +271,13 @@ public class Identification implements Visitor<Object, Object> {
     public Object visitAssignStmt(AssignStmt stmt, Object arg) {
         stmt.ref.visit(this, null);
         stmt.val.visit(this, null);
+
+        if (stmt.ref.decl instanceof FieldDecl) {
+            FieldDecl fieldDecl = (FieldDecl)stmt.ref.decl;
+            if (fieldDecl.isStatic) {
+                stmt.ref.decl.isStaticFieldRef = true;
+            }
+        }
         return null;
     }
 
@@ -603,6 +589,11 @@ public class Identification implements Visitor<Object, Object> {
                     idError("Undeclared class identifier for memberDecl of IdRef in QualRef", idRef.posn);
                 }
 
+                // mark that first id's type is the same as current class
+                if (classDecl.name.equals(currentClass.name)) {
+                    isCurrentClass = true;
+                }
+
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {
                     if (id.spelling.equals(fd.name)) {
@@ -630,6 +621,16 @@ public class Identification implements Visitor<Object, Object> {
                 // instead of finding the class which idRef is a type of, we have direct access to it
                 // don't need to cast the type of the decl to a class decl and then search classes
                 // also dont need to check if classDecl is a class
+
+                // mark that first id's type is the same as current class
+                if (classDecl.name.equals(currentClass.name)) {
+                    isCurrentClass = true;
+                }
+
+                // Allow for static field assignment of Class.field = Expr;
+                // todo: check if we need both to be true
+                idRef.decl.isStaticFieldRef = true;
+                id.decl.isStaticFieldRef = true;
 
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {

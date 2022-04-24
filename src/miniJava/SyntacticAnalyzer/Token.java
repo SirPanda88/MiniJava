@@ -43,7 +43,9 @@ public class Token {
         OPENBRACKET,
         CLOSEBRACKET,
         SEMICOLON,
+
         ASSIGNMENT,
+
         GREATER,
         LESS,
         EQUALS,
@@ -57,6 +59,8 @@ public class Token {
         MINUS,
         MULT,
         DIV,
+
+
         ERROR,
         NULL;
     }

@@ -4,6 +4,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 
+import miniJava.CodeGenerator.CodeGenerator;
 import miniJava.ContextualAnalyzer.Identification;
 import miniJava.ContextualAnalyzer.TypeChecking;
 import miniJava.SyntacticAnalyzer.Scanner;
@@ -12,7 +13,7 @@ import miniJava.AbstractSyntaxTrees.*;
 
 public class Compiler {
 
-    public static void main (String[] args) throws FileNotFoundException {
+    public static void main (String[] args) {
 
         // my compiler
         InputStream inputStream = null;
@@ -55,6 +56,16 @@ public class Compiler {
                     System.exit(4);
                 } else {
                     System.out.println("Type checking successful - contextually valid miniJava program");
+                    System.out.println("Beginning code generation: ...");
+                    CodeGenerator codeGenerator = new CodeGenerator(ast, errorReporter);
+                    codeGenerator.generate(args[0]);
+                    System.out.println("Code generation complete:");
+                    if (errorReporter.hasErrors()) {
+                        System.out.println("Code generation unsuccessful");
+                        System.exit(4);
+                    } else {
+                        System.out.println("Code generation successful");
+                    }
                 }
             }
             System.exit(0);
