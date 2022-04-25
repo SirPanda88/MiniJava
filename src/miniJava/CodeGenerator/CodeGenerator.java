@@ -57,29 +57,29 @@ public class CodeGenerator implements Visitor<Object, Object> {
         ast.visit(this, null);
 
         String objectCodeFileName = fileName.replace(".java", ".mJAM");
-        System.out.print("Writing objectFile " + objectCodeFileName + " ... ");
+//        System.out.print("Writing objectFile " + objectCodeFileName + " ... ");
         ObjectFile objectFile = new ObjectFile(objectCodeFileName);
         if (objectFile.write()) {
             compileError("Writing objectFile unsuccessful", new SourcePosition(-1));
         } else {
-            System.out.println("Writing objectFile successful");
+//            System.out.println("Writing objectFile successful");
         }
 
         String asmCodeFileName = objectCodeFileName.replace(".mJAM", ".asm");
-        System.out.print("Writing assembly file " + asmCodeFileName + " ... ");
+//        System.out.print("Writing assembly file " + asmCodeFileName + " ... ");
         Disassembler d = new Disassembler(objectCodeFileName);
         if (d.disassemble()) {
             compileError("Writing assembly file unsuccessful", new SourcePosition(-1));
             return;
         } else {
-            System.out.println("Writing assembly file successful");
+//            System.out.println("Writing assembly file successful");
         }
 
-//        if (debug) {
+        if (debug) {
 //            System.out.println("Running code in debugger ... ");
-//            Interpreter.debug(objectCodeFileName, asmCodeFileName);
+            Interpreter.interpret(objectCodeFileName);
 //            System.out.println(" program complete");
-//        }
+        }
     }
 
     @Override

@@ -497,6 +497,8 @@ public class Identification implements Visitor<Object, Object> {
             return null;
         }
 
+//        System.out.println("Call to visitIdentifier: arg = " + ((Reference) arg).decl.name + ", id = " + id.spelling);
+
         if (arg instanceof ThisRef) {
             // QualRef calling visitIdentifier method looks like this.id
             // check if identifier is a member of current class by checking currentClass declaration
@@ -532,6 +534,7 @@ public class Identification implements Visitor<Object, Object> {
             // allow the second id to be private
 
             IdRef idRef = (IdRef) arg;
+//            System.out.println("Arg is instance of idRef: arg = " + ((Reference) arg).decl.name + ", id = " + id.spelling);
             String className;
 
             // boolean to mark if first id's type is the same as current class
@@ -627,11 +630,6 @@ public class Identification implements Visitor<Object, Object> {
                     isCurrentClass = true;
                 }
 
-                // Allow for static field assignment of Class.field = Expr;
-                // todo: check if we need both to be true
-                idRef.decl.isStaticFieldRef = true;
-                id.decl.isStaticFieldRef = true;
-
                 // search class members for id
                 for (FieldDecl fd : classDecl.fieldDeclList) {
                     if (id.spelling.equals(fd.name)) {
@@ -642,6 +640,9 @@ public class Identification implements Visitor<Object, Object> {
                             idError("QualRef to a member of a class must be declared to have static access", id.posn);
                         }
                         id.decl = fd;
+                        // static field ref
+                        classDecl.isStaticFieldRef = true;
+                        id.decl.isStaticFieldRef = true;
                         return null;
                     }
                 }
@@ -672,6 +673,7 @@ public class Identification implements Visitor<Object, Object> {
             // check if identifier has both public and static access
 
             QualRef qualRef = (QualRef) arg;
+//            System.out.println("Arg is instance of QualRef: arg = " + ((Reference) arg).decl.name + ", id = " + id.spelling);
             String className;
 
             // boolean to mark if first id's type is the same as current class
